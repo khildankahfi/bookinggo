@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "863757320018",
+    "project_id": "bookinggo-e9b0b",
+    "storage_bucket": "bookinggo-e9b0b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:863757320018:android:64dfd01a19a4569304048b",
+        "android_client_info": {
+          "package_name": "com.example.reservasi_lapangan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHakiHaEVyrndnqNpjbhg1kJcHNP_I-As"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
