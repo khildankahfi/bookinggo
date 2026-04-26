@@ -1,12 +1,14 @@
 class Court {
   final String id;
-  final String name; // "Lapangan 1", "Lapangan 2", dst
-  final List<String> bookedSlots; // Format: 'YYYY-MM-DD_HH:00'
+  final String name;
+  final List<String> bookedSlots;
+  final bool isAvailable; // FIX: field baru dari admin toggle
 
   const Court({
     required this.id,
     required this.name,
     this.bookedSlots = const [],
+    this.isAvailable = true, // default tersedia
   });
 
   bool isSlotBooked(DateTime date, int hour) {
@@ -37,19 +39,17 @@ class Venue {
     required this.courts,
   });
 
-  // Cek apakah semua court penuh di slot tertentu
   bool isAllCourtsBooked(DateTime date, int hour) {
     return courts.every((c) => c.isSlotBooked(date, hour));
   }
 
-  // Hitung jumlah court tersedia di slot tertentu
   int availableCourtsCount(DateTime date, int hour) {
     return courts.where((c) => !c.isSlotBooked(date, hour)).length;
   }
 }
 
 // ════════════════════════════════════════════
-//  SAMPLE DATA — Setiap venue punya 3-4 court
+//  SAMPLE DATA
 // ════════════════════════════════════════════
 final List<Venue> sampleVenues = [
   Venue(
@@ -61,33 +61,9 @@ final List<Venue> sampleVenues = [
     location: 'Jakarta Selatan',
     pricePerHour: 150000,
     courts: [
-      Court(
-        id: '1-a',
-        name: 'Lapangan 1',
-        bookedSlots: [
-          '2026-03-27_08:00',
-          '2026-03-27_09:00',
-          '2026-03-27_14:00',
-        ],
-      ),
-      Court(
-        id: '1-b',
-        name: 'Lapangan 2',
-        bookedSlots: [
-          '2026-03-27_08:00',
-          '2026-03-27_10:00',
-          '2026-03-28_13:00',
-        ],
-      ),
-      Court(
-        id: '1-c',
-        name: 'Lapangan 3',
-        bookedSlots: [
-          '2026-03-27_14:00',
-          '2026-03-27_15:00',
-          '2026-03-28_09:00',
-        ],
-      ),
+      Court(id: '1-a', name: 'Lapangan 1', isAvailable: true),
+      Court(id: '1-b', name: 'Lapangan 2', isAvailable: true),
+      Court(id: '1-c', name: 'Lapangan 3', isAvailable: true),
     ],
   ),
   Venue(
@@ -99,30 +75,9 @@ final List<Venue> sampleVenues = [
     location: 'Jakarta Pusat',
     pricePerHour: 200000,
     courts: [
-      Court(
-        id: '2-a',
-        name: 'Lapangan 1',
-        bookedSlots: [
-          '2026-03-27_10:00',
-          '2026-03-27_11:00',
-        ],
-      ),
-      Court(
-        id: '2-b',
-        name: 'Lapangan 2',
-        bookedSlots: [
-          '2026-03-28_15:00',
-          '2026-03-28_16:00',
-        ],
-      ),
-      Court(
-        id: '2-c',
-        name: 'Lapangan 3',
-        bookedSlots: [
-          '2026-03-27_09:00',
-          '2026-03-28_10:00',
-        ],
-      ),
+      Court(id: '2-a', name: 'Lapangan 1', isAvailable: true),
+      Court(id: '2-b', name: 'Lapangan 2', isAvailable: true),
+      Court(id: '2-c', name: 'Lapangan 3', isAvailable: true),
     ],
   ),
   Venue(
@@ -134,37 +89,10 @@ final List<Venue> sampleVenues = [
     location: 'Jakarta Barat',
     pricePerHour: 100000,
     courts: [
-      Court(
-        id: '3-a',
-        name: 'Lapangan 1',
-        bookedSlots: [
-          '2026-03-27_07:00',
-          '2026-03-27_08:00',
-        ],
-      ),
-      Court(
-        id: '3-b',
-        name: 'Lapangan 2',
-        bookedSlots: [
-          '2026-03-28_16:00',
-          '2026-03-28_17:00',
-        ],
-      ),
-      Court(
-        id: '3-c',
-        name: 'Lapangan 3',
-        bookedSlots: [
-          '2026-03-27_10:00',
-          '2026-03-27_11:00',
-        ],
-      ),
-      Court(
-        id: '3-d',
-        name: 'Lapangan 4',
-        bookedSlots: [
-          '2026-03-27_13:00',
-        ],
-      ),
+      Court(id: '3-a', name: 'Lapangan 1', isAvailable: true),
+      Court(id: '3-b', name: 'Lapangan 2', isAvailable: true),
+      Court(id: '3-c', name: 'Lapangan 3', isAvailable: true),
+      Court(id: '3-d', name: 'Lapangan 4', isAvailable: true),
     ],
   ),
   Venue(
@@ -176,26 +104,9 @@ final List<Venue> sampleVenues = [
     location: 'Jakarta Timur',
     pricePerHour: 120000,
     courts: [
-      Court(
-        id: '4-a',
-        name: 'Lapangan 1',
-        bookedSlots: [
-          '2026-03-27_13:00',
-        ],
-      ),
-      Court(
-        id: '4-b',
-        name: 'Lapangan 2',
-        bookedSlots: [
-          '2026-03-28_09:00',
-          '2026-03-28_10:00',
-        ],
-      ),
-      Court(
-        id: '4-c',
-        name: 'Lapangan 3',
-        bookedSlots: [],
-      ),
+      Court(id: '4-a', name: 'Lapangan 1', isAvailable: true),
+      Court(id: '4-b', name: 'Lapangan 2', isAvailable: true),
+      Court(id: '4-c', name: 'Lapangan 3', isAvailable: true),
     ],
   ),
 ];

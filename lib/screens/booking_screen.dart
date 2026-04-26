@@ -44,6 +44,23 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _onSelectCourt(Court court) {
+    // FIX: cek isAvailable dari admin sebelum bisa dipilih
+    if (!court.isAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.block, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text('${court.name} sedang ditutup oleh admin'),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     setState(() {
       _selectedCourt = court;
       _selectedHour = null;
@@ -510,6 +527,9 @@ class _BookingScreenState extends State<BookingScreen> {
                 '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'))
             .length;
 
+        // FIX: lapangan ditutup admin → tampil abu-abu + label "Penuh"
+        final isClosed = !court.isAvailable;
+
         return GestureDetector(
           onTap: () => _onSelectCourt(court),
           child: AnimatedContainer(
@@ -517,11 +537,14 @@ class _BookingScreenState extends State<BookingScreen> {
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isSelected ? _primaryColor : Colors.white,
+              color: isClosed
+                  ? Colors.grey.shade100
+                  : isSelected ? _primaryColor : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color:
-                    isSelected ? _primaryColor : Colors.grey.shade200,
+                color: isClosed
+                    ? Colors.grey.shade300
+                    : isSelected ? _primaryColor : Colors.grey.shade200,
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: [
@@ -536,9 +559,10 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Column(
               children: [
                 Icon(
-                  Icons.crop_square_rounded,
-                  color:
-                      isSelected ? Colors.white : _primaryColor,
+                  isClosed ? Icons.lock_outline : Icons.crop_square_rounded,
+                  color: isClosed
+                      ? Colors.grey.shade400
+                      : isSelected ? Colors.white : _primaryColor,
                   size: 28,
                 ),
                 const SizedBox(height: 4),
@@ -547,18 +571,22 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF1A1A2E)),
+                      color: isClosed
+                          ? Colors.grey.shade400
+                          : isSelected
+                              ? Colors.white
+                              : const Color(0xFF1A1A2E)),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$bookedCount slot booked',
+                  isClosed ? 'Tidak Tersedia' : '$bookedCount slot booked',
                   style: TextStyle(
                       fontSize: 10,
-                      color: isSelected
-                          ? Colors.white70
-                          : Colors.grey.shade500),
+                      color: isClosed
+                          ? Colors.red.shade300
+                          : isSelected
+                              ? Colors.white70
+                              : Colors.grey.shade500),
                 ),
               ],
             ),

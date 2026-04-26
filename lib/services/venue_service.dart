@@ -96,6 +96,9 @@ class VenueService {
               id: c['id'].toString(),
               name: c['name'],
               bookedSlots: List<String>.from(c['bookedSlots'] ?? []),
+              // FIX: baca isAvailable dari Firestore — dikontrol oleh admin
+              // default true kalau field belum ada (backward compatible)
+              isAvailable: c['isAvailable'] ?? true,
             ))
         .toList();
 
