@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/venue.dart';
+import '../services/slot_service.dart';
 import 'payment_screen.dart';
 import 'package:intl/intl.dart';
 
@@ -28,33 +29,62 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _showMessage = false;
   bool _isAvailable = false;
   String _availabilityMessage = '';
+  bool _isLoadingSlots = false;
+  SlotAvailability _slotAvailability = const SlotAvailability(
+    bookedHours: {},
+    blockedHours: {},
+  );
 
   static const int _openHour = 7;
   static const int _closeHour = 21;
 
-  // ── Cek slot pada court yang dipilih ──
-  bool _isBooked(int hour) {
-    if (_selectedCourt == null) return false;
-    return _selectedCourt!.isSlotBooked(_selectedDate, hour);
+  // ── Load slot real-time dari Firestore saat court/tanggal berubah ──
+  Future<void> _loadSlots() async {
+    if (_selectedCourt == null) return;
+    setState(() => _isLoadingSlots = true);
+
+    final dateStr =
+        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
+    final availability = await SlotService.getUnavailableSlots(
+      courtId: _selectedCourt!.id,
+      date: dateStr,
+    );
+
+    if (mounted) {
+      setState(() {
+        _slotAvailability = availability;
+        _isLoadingSlots = false;
+        // Reset pilihan jam kalau slot yang dipilih sudah terpakai
+        if (_selectedHour != null &&
+            _slotAvailability.isUnavailable(_selectedHour!)) {
+          _selectedHour = null;
+          _showMessage = false;
+        }
+      });
+    }
   }
 
-  // ── Hitung court tersedia di jam tertentu (untuk info di time picker) ──
+  // ── Cek slot: gabungan booking user + blok admin ──
+  bool _isBooked(int hour) => _slotAvailability.bookedHours.contains(hour);
+  bool _isBlockedByAdmin(int hour) => _slotAvailability.blockedHours.contains(hour);
+  bool _isUnavailable(int hour) => _slotAvailability.isUnavailable(hour);
+
+  // ── Hitung court tersedia di jam tertentu ──
   int _availableCourtsAt(int hour) {
     return widget.venue.availableCourtsCount(_selectedDate, hour);
   }
 
   void _onSelectCourt(Court court) {
-    // FIX: cek isAvailable dari admin sebelum bisa dipilih
+    // Cek apakah lapangan ditutup total oleh admin
     if (!court.isAvailable) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.block, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text('${court.name} sedang ditutup oleh admin'),
-            ],
-          ),
+          content: Row(children: [
+            const Icon(Icons.block, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('${court.name} sedang ditutup oleh admin'),
+          ]),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
@@ -66,6 +96,8 @@ class _BookingScreenState extends State<BookingScreen> {
       _selectedHour = null;
       _showMessage = false;
     });
+    // FIX: load slot real-time dari Firestore setelah pilih lapangan
+    _loadSlots();
   }
 
   void _onSelectHour(int hour) {
@@ -82,11 +114,16 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       _selectedHour = hour;
       _showMessage = true;
-      if (_isBooked(hour)) {
+      // FIX: cek real-time — blok admin PRIORITAS lebih tinggi dari booking
+      if (_isBlockedByAdmin(hour)) {
+        _isAvailable = false;
+        _availabilityMessage =
+            '🚫 Slot jam ${hour.toString().padLeft(2, '0')}:00 ditutup oleh admin.\nSilakan pilih jam lain.';
+      } else if (_isBooked(hour)) {
         _isAvailable = false;
         final avail = _availableCourtsAt(hour);
         _availabilityMessage = avail > 0
-            ? '⚠️ ${_selectedCourt!.name} tidak tersedia di jam ini.\n$avail lapangan lain masih tersedia, coba pilih lapangan lain.'
+            ? '⚠️ ${_selectedCourt!.name} tidak tersedia di jam ini.\n$avail lapangan lain masih tersedia.'
             : '⚠️ Semua lapangan penuh di jam ${hour.toString().padLeft(2, '0')}:00.\nSilakan pilih jam lain.';
       } else {
         _isAvailable = true;
@@ -119,6 +156,8 @@ class _BookingScreenState extends State<BookingScreen> {
         _selectedHour = null;
         _showMessage = false;
       });
+      // FIX: reload slot saat tanggal berubah
+      _loadSlots();
     }
   }
 
@@ -527,9 +566,6 @@ class _BookingScreenState extends State<BookingScreen> {
                 '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}'))
             .length;
 
-        // FIX: lapangan ditutup admin → tampil abu-abu + label "Penuh"
-        final isClosed = !court.isAvailable;
-
         return GestureDetector(
           onTap: () => _onSelectCourt(court),
           child: AnimatedContainer(
@@ -537,14 +573,11 @@ class _BookingScreenState extends State<BookingScreen> {
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isClosed
-                  ? Colors.grey.shade100
-                  : isSelected ? _primaryColor : Colors.white,
+              color: isSelected ? _primaryColor : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isClosed
-                    ? Colors.grey.shade300
-                    : isSelected ? _primaryColor : Colors.grey.shade200,
+                color:
+                    isSelected ? _primaryColor : Colors.grey.shade200,
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: [
@@ -559,10 +592,9 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Column(
               children: [
                 Icon(
-                  isClosed ? Icons.lock_outline : Icons.crop_square_rounded,
-                  color: isClosed
-                      ? Colors.grey.shade400
-                      : isSelected ? Colors.white : _primaryColor,
+                  Icons.crop_square_rounded,
+                  color:
+                      isSelected ? Colors.white : _primaryColor,
                   size: 28,
                 ),
                 const SizedBox(height: 4),
@@ -571,22 +603,18 @@ class _BookingScreenState extends State<BookingScreen> {
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isClosed
-                          ? Colors.grey.shade400
-                          : isSelected
-                              ? Colors.white
-                              : const Color(0xFF1A1A2E)),
+                      color: isSelected
+                          ? Colors.white
+                          : const Color(0xFF1A1A2E)),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isClosed ? 'Tidak Tersedia' : '$bookedCount slot booked',
+                  '$bookedCount slot booked',
                   style: TextStyle(
                       fontSize: 10,
-                      color: isClosed
-                          ? Colors.red.shade300
-                          : isSelected
-                              ? Colors.white70
-                              : Colors.grey.shade500),
+                      color: isSelected
+                          ? Colors.white70
+                          : Colors.grey.shade500),
                 ),
               ],
             ),
@@ -639,6 +667,23 @@ class _BookingScreenState extends State<BookingScreen> {
 
   // ── Time Picker Grid ──
   Widget _buildTimePicker() {
+    // FIX: tampilkan loading saat fetch slot dari Firestore
+    if (_isLoadingSlots) {
+      return Container(
+        height: 120,
+        alignment: Alignment.center,
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(strokeWidth: 2),
+            SizedBox(height: 8),
+            Text('Mengecek ketersediaan slot...',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -652,6 +697,7 @@ class _BookingScreenState extends State<BookingScreen> {
       itemBuilder: (_, i) {
         final hour = _openHour + i;
         final booked = _isBooked(hour);
+        final blockedByAdmin = _isBlockedByAdmin(hour);
         final selected = _selectedHour == hour;
         final allBooked = widget.venue.isAllCourtsBooked(
             _selectedDate, hour);
@@ -669,6 +715,11 @@ class _BookingScreenState extends State<BookingScreen> {
           bgColor = _primaryColor;
           textColor = Colors.white;
           borderColor = _primaryColor;
+        } else if (blockedByAdmin) {
+          // FIX: slot diblok admin — tampil merah gelap
+          bgColor = Colors.red.shade50;
+          textColor = Colors.red.shade300;
+          borderColor = Colors.red.shade200;
         } else if (allBooked) {
           bgColor = Colors.grey.shade100;
           textColor = Colors.grey.shade400;
@@ -722,6 +773,11 @@ class _BookingScreenState extends State<BookingScreen> {
                       style: TextStyle(
                           fontSize: 8,
                           color: Colors.grey.shade400))
+                else if (blockedByAdmin)
+                  Text('Ditutup',
+                      style: TextStyle(
+                          fontSize: 8,
+                          color: Colors.red.shade300))
                 else if (booked && _selectedCourt != null)
                   Text('Dipakai',
                       style: TextStyle(
@@ -751,6 +807,8 @@ class _BookingScreenState extends State<BookingScreen> {
             Colors.orange.shade50, Colors.orange.shade200, 'Lap. ini penuh'),
         _legendItem(
             Colors.grey.shade100, Colors.grey.shade200, 'Semua penuh'),
+        _legendItem(
+            Colors.red.shade50, Colors.red.shade200, 'Ditutup admin'),
       ],
     );
   }
