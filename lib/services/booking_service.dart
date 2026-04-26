@@ -11,17 +11,12 @@ class BookingService {
       final uid = _auth.currentUser?.uid;
       if (uid == null) return [];
 
-      // FIX RIWAYAT: hapus .orderBy() — ini yang bikin query diam-diam gagal
-      // karena butuh Composite Index yang belum dibuat di Firebase Console.
-      // Sort dilakukan lokal setelah data masuk — hasilnya sama, tanpa index.
       final snapshot = await _db
           .collection('bookings')
           .where('userId', isEqualTo: uid)
           .get()
-          .timeout(
-            const Duration(seconds: 8),
-            onTimeout: () => throw Exception('timeout'),
-          );
+          .timeout(const Duration(seconds: 8),
+              onTimeout: () => throw Exception('timeout'));
 
       final bookings = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -29,12 +24,9 @@ class BookingService {
         return data;
       }).toList();
 
-      // Sort lokal: terbaru di atas — pakai bookingCode karena serverTimestamp
-      // bisa null sesaat setelah write (belum sync dari server)
       bookings.sort((a, b) {
         final aTime = (a['createdAt'] as dynamic)?.millisecondsSinceEpoch ?? 0;
         final bTime = (b['createdAt'] as dynamic)?.millisecondsSinceEpoch ?? 0;
-        // Fallback ke bookingCode jika timestamp sama/null
         if (aTime == bTime) {
           return (b['bookingCode'] ?? '').compareTo(a['bookingCode'] ?? '');
         }
@@ -47,7 +39,7 @@ class BookingService {
     }
   }
 
-  // ── Buat booking baru ──
+  // ── Buat booking baru + cek double booking ──
   static Future<Map<String, dynamic>> createBooking({
     required String venueId,
     required String courtId,
@@ -64,12 +56,54 @@ class BookingService {
         return {'success': false, 'message': 'User belum login'};
       }
 
-      final bookingCode =
-          'BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      // ── STEP 1: Cek double booking ──
+      // Query hanya 2 field (courtId + date) → tidak butuh composite index
+      // Filter hour dan status dilakukan lokal di Dart
+      final snapshot = await _db
+          .collection('bookings')
+          .where('courtId', isEqualTo: courtId)
+          .where('date', isEqualTo: date)
+          .get()
+          .timeout(const Duration(seconds: 5),
+              onTimeout: () => throw Exception('timeout'));
 
-      // WRITE: tidak pakai timeout — Firestore write butuh 1–15 detik
-      // tergantung koneksi. Timeout bikin booking tetap tersimpan tapi
-      // user dapat error palsu (bug lama).
+      // Cek lokal: ada booking active di jam yang sama?
+      final isDoubleBooked = snapshot.docs.any((doc) {
+        final data = doc.data();
+        return data['hour'] == hour && data['status'] == 'active';
+      });
+
+      if (isDoubleBooked) {
+        return {
+          'success': false,
+          'message':
+              'Maaf, slot ${hour.toString().padLeft(2, '0')}:00 baru saja dipesan orang lain. Silakan pilih jam lain.',
+        };
+      }
+
+      // ── STEP 2: Cek slot diblok admin ──
+      final blockedDoc = await _db
+          .collection('blocked_slots')
+          .doc('${courtId}_$date')
+          .get()
+          .timeout(const Duration(seconds: 5));
+
+      if (blockedDoc.exists) {
+        final blockedHours =
+            List<int>.from(blockedDoc.data()?['hours'] ?? []);
+        if (blockedHours.contains(hour)) {
+          return {
+            'success': false,
+            'message':
+                'Slot ${hour.toString().padLeft(2, '0')}:00 ditutup oleh admin.',
+          };
+        }
+      }
+
+      // ── STEP 3: Simpan booking ──
+      final ts = DateTime.now().millisecondsSinceEpoch.toString();
+      final bookingCode = 'BK-${ts.substring(ts.length - 9)}';
+
       final docRef = await _db.collection('bookings').add({
         'userId': uid,
         'venueId': venueId,
@@ -90,10 +124,17 @@ class BookingService {
         'bookingId': docRef.id,
         'bookingCode': bookingCode,
       };
+    } on FirebaseException catch (e) {
+      return {
+        'success': false,
+        'message': 'Gagal booking: ${e.message}',
+      };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Gagal menyimpan booking, cek koneksi internet kamu',
+        'message': e.toString().contains('timeout')
+            ? 'Koneksi lambat, coba lagi'
+            : 'Gagal menyimpan booking, cek koneksi internet kamu',
       };
     }
   }
@@ -105,7 +146,6 @@ class BookingService {
           .collection('bookings')
           .doc(bookingId)
           .update({'status': 'cancelled'});
-
       return {'success': true};
     } catch (e) {
       return {
