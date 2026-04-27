@@ -18,7 +18,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadBookings();
   }
 
@@ -83,6 +83,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
           tabs: const [
             Tab(text: 'Semua'),
             Tab(text: 'Aktif'),
+            Tab(text: 'Menunggu'),
             Tab(text: 'Dibatalkan'),
           ],
         ),
@@ -91,8 +92,8 @@ class _RiwayatScreenState extends State<RiwayatScreen>
         controller: _tabController,
         children: [
           _buildList('semua'),
-          // FIX BUG 3: BookingService menyimpan status 'active', bukan 'confirmed'
           _buildList('active'),
+          _buildList('pending'),
           _buildList('cancelled'),
         ],
       ),
@@ -148,8 +149,8 @@ class _RiwayatScreenState extends State<RiwayatScreen>
       case 'pending':
         statusColor = Colors.orange.shade700;
         statusBg = Colors.orange.shade50;
-        statusLabel = 'Menunggu';
-        statusIcon = Icons.hourglass_empty;
+        statusLabel = 'Menunggu Konfirmasi';
+        statusIcon = Icons.hourglass_top;
         break;
       case 'cancelled':
         statusColor = Colors.red.shade700;
@@ -303,7 +304,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
           ),
 
           // FIX BUG 3: Tombol aksi untuk status 'active', bukan 'confirmed'
-          if (status == 'active') ...[
+          if (status == 'active' || status == 'pending') ...[
             Divider(height: 1, color: Colors.grey.shade100),
             Padding(
               padding:

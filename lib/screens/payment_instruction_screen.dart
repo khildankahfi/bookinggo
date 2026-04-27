@@ -142,16 +142,40 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
                   color: Colors.green, size: 52),
             ),
             const SizedBox(height: 16),
-            const Text('Booking Berhasil!',
+            const Text('Pembayaran Terkirim!',
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.bold,
                     color: Color(0xFF1A1A2E))),
             const SizedBox(height: 8),
             Text(
-              'Booking ${widget.court.name} di ${widget.venue.name} telah dikonfirmasi.',
+              'Booking ${widget.court.name} di ${widget.venue.name} sedang menunggu konfirmasi admin.',
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.hourglass_top, color: Colors.orange.shade700, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Menunggu konfirmasi admin',
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             Container(

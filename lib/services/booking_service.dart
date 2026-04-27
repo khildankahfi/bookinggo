@@ -67,10 +67,13 @@ class BookingService {
           .timeout(const Duration(seconds: 5),
               onTimeout: () => throw Exception('timeout'));
 
-      // Cek lokal: ada booking active di jam yang sama?
+      // Cek lokal: ada booking active/pending di jam yang sama?
+      // Tolak jika sudah ada booking active ATAU pending (menunggu konfirmasi)
       final isDoubleBooked = snapshot.docs.any((doc) {
         final data = doc.data();
-        return data['hour'] == hour && data['status'] == 'active';
+        final sameHour = data['hour'] == hour;
+        final status = data['status'] as String? ?? '';
+        return sameHour && (status == 'active' || status == 'pending');
       });
 
       if (isDoubleBooked) {
@@ -115,7 +118,8 @@ class BookingService {
         'paymentMethod': paymentMethod,
         'totalPrice': totalPrice,
         'bookingCode': bookingCode,
-        'status': 'active',
+        // Status awal 'pending' — menunggu konfirmasi admin
+        'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
