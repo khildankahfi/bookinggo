@@ -206,6 +206,10 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  // ── Harga dinamis berdasarkan hari yang dipilih ──
+  int get _currentPrice => widget.venue.getPriceForDate(_selectedDate);
+  String get _priceLabel => widget.venue.getPriceLabel(_selectedDate);
+
   // Format tanggal manual tanpa intl
   String _formatDate(DateTime d) {
     const hari = [
@@ -234,7 +238,8 @@ class _BookingScreenState extends State<BookingScreen> {
     final dateStr = _formatDate(_selectedDate);
     final jamStr =
         '${hour.toString().padLeft(2, '0')}:00 – ${(hour + 1).toString().padLeft(2, '0')}:00';
-    final harga = _formatHarga(widget.venue.pricePerHour);
+    // FIX: gunakan harga dinamis weekday/weekend
+    final harga = _formatHarga(_currentPrice);
 
     showModalBottomSheet(
       context: context,

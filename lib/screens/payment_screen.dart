@@ -71,7 +71,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return '${hari[d.weekday - 1]}, ${d.day} ${bulan[d.month]} ${d.year}';
   }
 
-  int get _totalBayar => widget.venue.pricePerHour;
+  // FIX: harga dinamis berdasarkan hari (weekday/weekend)
+  int get _totalBayar => widget.venue.getPriceForDate(widget.date);
+  String get _priceLabel => widget.venue.getPriceLabel(widget.date);
   int get _biayaAdmin => 2000;
   int get _grandTotal => _totalBayar + _biayaAdmin;
 
@@ -360,7 +362,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          _priceRow('Sewa lapangan (1 jam)', _formatHarga(_totalBayar)),
+          _priceRow(_priceLabel, _formatHarga(_totalBayar)),
           const SizedBox(height: 8),
           _priceRow('Biaya admin', _formatHarga(_biayaAdmin)),
           const SizedBox(height: 12),

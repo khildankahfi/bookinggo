@@ -212,7 +212,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
                 const SizedBox(height: 6),
                 _infoRow(
                   Icons.payments_outlined,
-                  '${_formatHarga(widget.venue.pricePerHour)} / jam',
+                  widget.venue.getPriceLabel(DateTime.now()),
                   valueColor: _primaryColor,
                   bold: true,
                 ),

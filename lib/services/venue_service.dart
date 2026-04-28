@@ -117,6 +117,9 @@ class VenueService {
       imageUrl: data['imageUrl'] ?? '',
       location: data['location'] ?? '',
       pricePerHour: (data['pricePerHour'] as num?)?.toInt() ?? 100000,
+      // FIX: baca harga weekday/weekend yang diset admin
+      weekdayPrice: (data['weekdayPrice'] as num?)?.toInt(),
+      weekendPrice: (data['weekendPrice'] as num?)?.toInt(),
       courts: courts,
     );
   }

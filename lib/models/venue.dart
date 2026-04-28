@@ -25,7 +25,9 @@ class Venue {
   final double rating;
   final String imageUrl;
   final String location;
-  final int pricePerHour;
+  final int pricePerHour;   // harga dasar (weekday)
+  final int? weekdayPrice;  // harga Senin–Jumat (dari admin)
+  final int? weekendPrice;  // harga Sabtu–Minggu (dari admin)
   final List<Court> courts;
 
   const Venue({
@@ -36,8 +38,49 @@ class Venue {
     required this.imageUrl,
     required this.location,
     required this.pricePerHour,
+    this.weekdayPrice,
+    this.weekendPrice,
     required this.courts,
   });
+
+  /// Ambil harga berdasarkan tanggal yang dipilih user
+  /// Kalau admin belum set harga khusus → pakai pricePerHour
+  int getPriceForDate(DateTime date) {
+    final isWeekend = date.weekday == DateTime.saturday ||
+        date.weekday == DateTime.sunday;
+
+    if (isWeekend && weekendPrice != null && weekendPrice! > 0) {
+      return weekendPrice!;
+    }
+    if (!isWeekend && weekdayPrice != null && weekdayPrice! > 0) {
+      return weekdayPrice!;
+    }
+    return pricePerHour;
+  }
+
+  /// Label harga untuk ditampilkan di UI
+  String getPriceLabel(DateTime date) {
+    final isWeekend = date.weekday == DateTime.saturday ||
+        date.weekday == DateTime.sunday;
+    final price = getPriceForDate(date);
+
+    if (weekendPrice != null && weekdayPrice != null &&
+        weekendPrice != weekdayPrice) {
+      return isWeekend ? 'Rp ${_formatPrice(price)}/jam (Weekend)' 
+                       : 'Rp ${_formatPrice(price)}/jam (Weekday)';
+    }
+    return 'Rp ${_formatPrice(price)}/jam';
+  }
+
+  String _formatPrice(int price) {
+    final str = price.toString();
+    final buffer = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(str[i]);
+    }
+    return buffer.toString();
+  }
 
   bool isAllCourtsBooked(DateTime date, int hour) {
     return courts.every((c) => c.isSlotBooked(date, hour));
