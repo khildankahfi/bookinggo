@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class NotifikasiScreen extends StatefulWidget {
   const NotifikasiScreen({super.key});
@@ -9,85 +11,94 @@ class NotifikasiScreen extends StatefulWidget {
 
 class _NotifikasiScreenState extends State<NotifikasiScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
+  static final _db   = FirebaseFirestore.instance;
+  static final _auth = FirebaseAuth.instance;
 
-  // Sample notifikasi — di production ambil dari Firestore
-  final List<Map<String, dynamic>> _notifikasi = [
-    {
-      'id': '1',
-      'judul': 'Booking Dikonfirmasi ✅',
-      'pesan': 'Booking kamu di Futsal Arena pada Senin, 21 Apr 2026 pukul 08:00 telah dikonfirmasi.',
-      'waktu': '2 jam lalu',
-      'tipe': 'booking',
-      'dibaca': false,
-    },
-    {
-      'id': '2',
-      'judul': 'Promo Spesial 🎉',
-      'pesan': 'Diskon 20% untuk semua lapangan badminton setiap Selasa. Berlaku hingga akhir bulan!',
-      'waktu': '1 hari lalu',
-      'tipe': 'promo',
-      'dibaca': false,
-    },
-    {
-      'id': '3',
-      'judul': 'Pengingat Booking ⏰',
-      'pesan': 'Jangan lupa! Kamu punya booking di K14 Arena besok pukul 10:00. Hadir tepat waktu ya.',
-      'waktu': '2 hari lalu',
-      'tipe': 'reminder',
-      'dibaca': true,
-    },
-    {
-      'id': '4',
-      'judul': 'Selamat Datang! 👋',
-      'pesan': 'Akun kamu berhasil dibuat. Mulai reservasi lapangan olahraga favoritmu sekarang!',
-      'waktu': '5 hari lalu',
-      'tipe': 'info',
-      'dibaca': true,
-    },
-  ];
+  List<Map<String, dynamic>> _notifikasi = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifikasi();
+  }
+
+  Future<void> _loadNotifikasi() async {
+    setState(() => _isLoading = true);
+    try {
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) { setState(() => _isLoading = false); return; }
+
+      final snapshot = await _db
+          .collection('notifications')
+          .where('userId', isEqualTo: uid)
+          .get()
+          .timeout(const Duration(seconds: 8));
+
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      list.sort((a, b) => (b['sentAt'] ?? '').compareTo(a['sentAt'] ?? ''));
+      setState(() { _notifikasi = list; _isLoading = false; });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _tandaiDibaca(String id) async {
+    await _db.collection('notifications').doc(id).update({'isRead': true});
+    setState(() {
+      final i = _notifikasi.indexWhere((n) => n['id'] == id);
+      if (i != -1) _notifikasi[i]['isRead'] = true;
+    });
+  }
+
+  Future<void> _tandaiSemuaDibaca() async {
+    final batch = _db.batch();
+    for (final n in _notifikasi) {
+      if (n['isRead'] != true) {
+        batch.update(_db.collection('notifications').doc(n['id']), {'isRead': true});
+      }
+    }
+    await batch.commit();
+    setState(() { for (final n in _notifikasi) n['isRead'] = true; });
+  }
 
   int get _jumlahBelumDibaca =>
-      _notifikasi.where((n) => n['dibaca'] == false).length;
-
-  void _tandaiDibaca(String id) {
-    setState(() {
-      final notif = _notifikasi.firstWhere((n) => n['id'] == id);
-      notif['dibaca'] = true;
-    });
-  }
-
-  void _tandaiSemuaDibaca() {
-    setState(() {
-      for (final n in _notifikasi) {
-        n['dibaca'] = true;
-      }
-    });
-  }
+      _notifikasi.where((n) => n['isRead'] != true).length;
 
   IconData _getIcon(String tipe) {
     switch (tipe) {
-      case 'booking':
-        return Icons.confirmation_number_outlined;
-      case 'promo':
-        return Icons.local_offer_outlined;
-      case 'reminder':
-        return Icons.alarm;
-      default:
-        return Icons.notifications_outlined;
+      case 'promo':    return Icons.local_offer_outlined;
+      case 'reminder': return Icons.alarm;
+      case 'warning':  return Icons.warning_amber_rounded;
+      default:         return Icons.notifications_outlined;
     }
   }
 
   Color _getColor(String tipe) {
     switch (tipe) {
-      case 'booking':
-        return Colors.green;
-      case 'promo':
-        return Colors.orange;
-      case 'reminder':
-        return Colors.blue;
-      default:
-        return _primaryColor;
+      case 'promo':    return Colors.orange;
+      case 'reminder': return _primaryColor;
+      case 'warning':  return Colors.red;
+      default:         return Colors.blue;
     }
+  }
+
+  String _formatWaktu(String? sentAt) {
+    if (sentAt == null) return '-';
+    try {
+      final dt   = DateTime.parse(sentAt).toLocal();
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return 'Baru saja';
+      if (diff.inHours < 1)   return '${diff.inMinutes} menit lalu';
+      if (diff.inDays < 1)    return '${diff.inHours} jam lalu';
+      if (diff.inDays < 7)    return '${diff.inDays} hari lalu';
+      return '${dt.day}/${dt.month}/${dt.year}';
+    } catch (_) { return '-'; }
   }
 
   @override
@@ -95,33 +106,23 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Notifikasi',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            if (_jumlahBelumDibaca > 0) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Notifikasi',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          if (_jumlahBelumDibaca > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
                   color: Colors.redAccent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$_jumlahBelumDibaca',
+                  borderRadius: BorderRadius.circular(10)),
+              child: Text('$_jumlahBelumDibaca',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ]
-          ],
-        ),
+                      color: Colors.white, fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ]
+        ]),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1A1A2E),
         elevation: 0,
@@ -130,137 +131,106 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
           if (_jumlahBelumDibaca > 0)
             TextButton(
               onPressed: _tandaiSemuaDibaca,
-              child: const Text(
-                'Baca Semua',
-                style: TextStyle(color: _primaryColor, fontSize: 13),
-              ),
+              child: const Text('Baca Semua',
+                  style: TextStyle(color: _primaryColor, fontSize: 13)),
             ),
         ],
       ),
-      body: _notifikasi.isEmpty
-          ? _buildEmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _notifikasi.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _buildNotifCard(_notifikasi[i]),
-            ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none,
-              size: 72, color: Colors.grey.shade200),
-          const SizedBox(height: 16),
-          const Text(
-            'Tidak ada notifikasi',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Kamu akan mendapat notifikasi\nseputar booking dan promo di sini',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-          ),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _notifikasi.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_none,
+                          size: 72, color: Colors.grey.shade200),
+                      const SizedBox(height: 16),
+                      const Text('Tidak ada notifikasi',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1A2E))),
+                      const SizedBox(height: 8),
+                      Text('Notifikasi dari admin akan muncul di sini',
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 13)),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadNotifikasi,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _notifikasi.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) => _buildNotifCard(_notifikasi[i]),
+                  ),
+                ),
     );
   }
 
   Widget _buildNotifCard(Map<String, dynamic> notif) {
-    final bool dibaca = notif['dibaca'] as bool;
-    final color = _getColor(notif['tipe']);
+    final bool dibaca = notif['isRead'] == true;
+    final tipe  = notif['type'] as String? ?? 'info';
+    final color = _getColor(tipe);
 
     return GestureDetector(
-      onTap: () => _tandaiDibaca(notif['id']),
+      onTap: () { if (!dibaca) _tandaiDibaca(notif['id']); },
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: dibaca ? Colors.white : _primaryColor.withOpacity(0.04),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: dibaca ? Colors.transparent : _primaryColor.withOpacity(0.15),
-          ),
+              color: dibaca
+                  ? Colors.transparent
+                  : _primaryColor.withOpacity(0.15)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2))
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon tipe notifikasi
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
                 color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(_getIcon(notif['tipe']), color: color, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notif['judul'],
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: dibaca
-                                ? FontWeight.w500
-                                : FontWeight.bold,
-                            color: const Color(0xFF1A1A2E),
-                          ),
-                        ),
-                      ),
-                      // Dot belum dibaca
-                      if (!dibaca)
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: _primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
+                borderRadius: BorderRadius.circular(10)),
+            child: Icon(_getIcon(tipe), color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                  child: Text(notif['title'] ?? '',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight:
+                              dibaca ? FontWeight.w500 : FontWeight.bold,
+                          color: const Color(0xFF1A1A2E))),
+                ),
+                if (!dibaca)
+                  Container(
+                    width: 8, height: 8,
+                    decoration: const BoxDecoration(
+                        color: _primaryColor, shape: BoxShape.circle),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    notif['pesan'],
-                    style: TextStyle(
+              ]),
+              const SizedBox(height: 4),
+              Text(notif['message'] ?? '',
+                  style: TextStyle(
                       color: Colors.grey.shade600,
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    notif['waktu'],
-                    style: TextStyle(
-                        color: Colors.grey.shade400, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+                      fontSize: 12, height: 1.4)),
+              const SizedBox(height: 6),
+              Text(_formatWaktu(notif['sentAt']),
+                  style: TextStyle(
+                      color: Colors.grey.shade400, fontSize: 11)),
+            ]),
+          ),
+        ]),
       ),
     );
   }
