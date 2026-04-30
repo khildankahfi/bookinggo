@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/booking_service.dart';
 
 class RiwayatScreen extends StatefulWidget {
@@ -311,7 +312,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  Expanded(
+        Expanded(
                     child: OutlinedButton(
                       onPressed: () => _konfirmasiBatal(booking),
                       style: OutlinedButton.styleFrom(
@@ -322,6 +323,24 @@ class _RiwayatScreenState extends State<RiwayatScreen>
                       ),
                       child: const Text('Batalkan',
                           style: TextStyle(fontSize: 13)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Tombol share kode booking
+                  OutlinedButton(
+                    onPressed: () => _shareBooking(booking),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF5E5CE6),
+                      side: const BorderSide(color: Color(0xFF5E5CE6)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.share_outlined, size: 14),
+                        SizedBox(width: 4),
+                        Text('Share', style: TextStyle(fontSize: 13)),
+                      ],
                     ),
                   ),
                 ],
@@ -350,6 +369,134 @@ class _RiwayatScreenState extends State<RiwayatScreen>
           ),
         ),
       ],
+    );
+  }
+
+  void _shareBooking(Map<String, dynamic> booking) {
+    final code    = booking['bookingCode'] ?? '-';
+    final venue   = booking['venueName']   ?? '-';
+    final court   = booking['courtName']   ?? '-';
+    final date    = booking['date']        ?? '-';
+    final hour    = (booking['hour'] as num?)?.toInt() ?? 0;
+    final jamStr  = '${hour.toString().padLeft(2, '0')}:00 – ${(hour+1).toString().padLeft(2, '0')}:00';
+    final price   = (booking['totalPrice'] as num?)?.toInt() ?? 0;
+
+    final text = '''
+🏟️ Booking Reservasi Lapangan
+
+📋 Kode: $code
+🏟️ Venue: $venue
+🎯 Lapangan: $court
+📅 Tanggal: $date
+⏰ Jam: $jamStr
+💰 Total: Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '\${m[1]}.')}
+
+Tunjukkan kode ini ke petugas saat tiba di lokasi.
+''';
+
+    // Copy ke clipboard
+    Clipboard.setData(ClipboardData(text: text.trim()));
+
+    // Tampilkan bottom sheet
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Bagikan Kode Booking',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Kode booking besar
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF5E5CE6).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF5E5CE6).withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF5E5CE6),
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\$venue • \$court',
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                  Text(
+                    '\$date • \$jamStr',
+                    style: TextStyle(
+                        color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Tombol copy
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 18),
+                        SizedBox(width: 8),
+                        Text('Info booking disalin ke clipboard!'),
+                      ]),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('Salin Info Booking'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup',
+                  style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

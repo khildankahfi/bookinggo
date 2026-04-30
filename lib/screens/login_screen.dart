@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 import '../services/auth_service.dart';
+import 'lupa_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -147,6 +148,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (val.length < 6) return 'Password minimal 6 karakter';
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Lupa Password Link ──
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LupaPasswordScreen()),
+                      ),
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(
+                          color: _primaryColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
 
