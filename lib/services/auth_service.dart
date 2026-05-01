@@ -33,7 +33,8 @@ class AuthService {
 
   // ── Register ──
   static Future<Map<String, dynamic>> register(
-      String name, String email, String password) async {
+      String name, String email, String password,
+      {String? phone}) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -41,13 +42,14 @@ class AuthService {
       );
       final user = credential.user!;
 
-      // Set displayName dulu agar login berikutnya tidak perlu hit Firestore
+      // Set displayName agar login tidak perlu hit Firestore
       await user.updateDisplayName(name);
 
-      // Simpan ke Firestore untuk data tambahan (phone, dll) — fire and forget
+      // Simpan ke Firestore termasuk nomor WA
       _db.collection('users').doc(user.uid).set({
         'name': name,
         'email': email,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

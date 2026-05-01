@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LupaPasswordScreen extends StatefulWidget {
   const LupaPasswordScreen({super.key});
@@ -10,6 +11,9 @@ class LupaPasswordScreen extends StatefulWidget {
 
 class _LupaPasswordScreenState extends State<LupaPasswordScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
+
+  // ⚠️ Ganti dengan nomor WA admin kamu (format: 62xxx)
+  static const String _adminWA = '6281234567890';
 
   final _formKey     = GlobalKey<FormState>();
   final _emailCtrl   = TextEditingController();
@@ -61,6 +65,29 @@ class _LupaPasswordScreenState extends State<LupaPasswordScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  // ── Buka WhatsApp ke admin ──
+  Future<void> _bukaWhatsApp() async {
+    final pesan = Uri.encodeComponent(
+        'Halo admin, saya lupa password akun BookingGo saya. '
+        'Email terdaftar: \${_emailCtrl.text.trim()}. '
+        'Mohon bantuannya. Terima kasih.');
+    final url = Uri.parse('https://wa.me/$_adminWA?text=\$pesan');
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('WhatsApp tidak ditemukan di perangkat ini'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
