@@ -42,46 +42,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ── Validasi email harus dari domain resmi ──
+  // ── Validasi email (opsional) ──
+  // Kalau diisi → harus dari domain resmi (Gmail, Yahoo, dll)
+  // Fungsi: untuk reset password kalau lupa
   String? _validateEmail(String? val) {
-    if (val == null || val.trim().isEmpty) return 'Email wajib diisi';
+    if (val == null || val.trim().isEmpty) return null; // opsional
 
     final email = val.trim().toLowerCase();
-
-    // Cek format dasar
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(email)) return 'Format email tidak valid';
 
-    // Cek domain harus dikenal
     final domain = email.split('@').last;
     final isValidDomain = _validDomains.any((d) =>
         domain == d || domain.endsWith('.$d'));
-
     if (!isValidDomain) {
-      return 'Gunakan email aktif (Gmail, Yahoo, Outlook, dll)';
+      return 'Gunakan email aktif (Gmail, Yahoo, Outlook, iCloud, dll)';
     }
-
     return null;
   }
 
-  // ── Validasi nomor HP / WhatsApp ──
+  // ── Validasi nomor WA (opsional) ──
+  // Kalau diisi → harus format nomor HP Indonesia
+  // Fungsi: admin WA user untuk info booking
   String? _validatePhone(String? val) {
-    if (val == null || val.trim().isEmpty) return 'Nomor WhatsApp wajib diisi';
+    if (val == null || val.trim().isEmpty) return null; // opsional
 
     final phone = val.trim().replaceAll(RegExp(r'\s|-'), '');
-
-    // Harus diawali 08 atau +62
     if (!phone.startsWith('08') && !phone.startsWith('+62') &&
         !phone.startsWith('628')) {
       return 'Nomor harus diawali 08 atau +62';
     }
 
-    // Panjang 10-15 digit
     final digits = phone.replaceAll(RegExp(r'\D'), '');
     if (digits.length < 10 || digits.length > 15) {
-      return 'Nomor HP tidak valid (10-15 digit)';
+      return 'Nomor WA tidak valid (10-15 digit)';
     }
-
     return null;
   }
 
@@ -98,6 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
     if (!_agreeTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -146,6 +142,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     }
+  }
+
+  Widget _infoRow(IconData icon, String text, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -218,26 +232,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      hintText: 'Email Aktif (Gmail/Yahoo/Outlook)',
+                      hintText: 'Email aktif (untuk lupa password)',
                       prefixIcon: Icon(Icons.email_outlined,
                           color: Colors.grey, size: 20),
                     ),
                     validator: _validateEmail,
                   ),
                   const SizedBox(height: 6),
-                  // Info email
-                  Row(
-                    children: [
-                      const SizedBox(width: 4),
-                      Icon(Icons.info_outline,
-                          size: 12, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Email digunakan untuk reset password',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11),
-                      ),
-                    ],
+                  _infoRow(
+                    Icons.lock_reset,
+                    'Opsional — digunakan untuk reset password jika lupa',
+                    Colors.blue.shade400,
                   ),
                   const SizedBox(height: 14),
 
@@ -250,25 +255,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           RegExp(r'[0-9+\-\s]')),
                     ],
                     decoration: const InputDecoration(
-                      hintText: 'Nomor WhatsApp (08xx / +62xx)',
+                      hintText: 'Nomor WhatsApp (untuk konfirmasi booking)',
                       prefixIcon: Icon(Icons.phone_outlined,
                           color: Colors.grey, size: 20),
                     ),
                     validator: _validatePhone,
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const SizedBox(width: 4),
-                      Icon(Icons.info_outline,
-                          size: 12, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Nomor WA aktif untuk konfirmasi booking',
-                        style: TextStyle(
-                            color: Colors.grey.shade500, fontSize: 11),
-                      ),
-                    ],
+                  _infoRow(
+                    Icons.notifications_active_outlined,
+                    'Opsional — admin akan WA kamu untuk konfirmasi booking',
+                    Colors.green.shade400,
                   ),
                   const SizedBox(height: 14),
 

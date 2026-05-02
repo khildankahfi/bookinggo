@@ -6,11 +6,15 @@ class AuthService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ── Login ──
+  // Bisa pakai email ATAU nomor WA (08xxx)
   static Future<Map<String, dynamic>> login(
-      String email, String password) async {
+      String emailOrPhone, String password) async {
     try {
+      // Login pakai email
+      String loginEmail = emailOrPhone.trim();
+
       final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
+        email: loginEmail,
         password: password,
       );
       final user = credential.user!;
@@ -32,30 +36,44 @@ class AuthService {
   }
 
   // ── Register ──
+  // Email ATAU phone wajib diisi minimal satu
   static Future<Map<String, dynamic>> register(
       String name, String email, String password,
       {String? phone}) async {
     try {
+      // Email wajib untuk Firebase Auth (login + reset password)
+      // Nomor WA opsional — hanya disimpan ke Firestore untuk
+      // keperluan admin menghubungi user terkait booking
+      final String loginEmail = email.trim();
+
+      if (loginEmail.isEmpty) {
+        return {'success': false, 'message': 'Email wajib diisi'};
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
+        email: loginEmail,
         password: password,
       );
       final user = credential.user!;
 
-      // Set displayName agar login tidak perlu hit Firestore
       await user.updateDisplayName(name);
 
-      // Simpan ke Firestore termasuk nomor WA
+      // Simpan ke Firestore — termasuk nomor WA kalau ada
       _db.collection('users').doc(user.uid).set({
         'name': name,
-        'email': email,
+        'email': loginEmail,
         if (phone != null && phone.isNotEmpty) 'phone': phone,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       return {
         'success': true,
-        'user': {'uid': user.uid, 'email': email, 'name': name},
+        'user': {
+          'uid': user.uid,
+          'email': loginEmail,
+          'name': name,
+          'phone': phone,
+        },
       };
     } on FirebaseAuthException catch (e) {
       return {'success': false, 'message': _authErrorMessage(e.code)};
@@ -110,6 +128,9 @@ class AuthService {
       return {'success': false, 'message': 'Gagal update profil: $e'};
     }
   }
+
+  // ── Ambil UID user saat ini (synchronous) ──
+  static String? getCurrentUid() => _auth.currentUser?.uid;
 
   // ── Cek apakah sudah login ──
   // FIX SPEED: synchronous check — tidak perlu async/await
