@@ -21,6 +21,7 @@ BookingGo Users adalah aplikasi mobile berbasis Flutter yang digunakan untuk mel
 
 ## Gambaran Sistem
 Aplikasi ini terhubung dengan BookingGo Admin Dashboard, di mana data booking dari pengguna akan langsung masuk ke sistem admin untuk dikelola.
+
 ![Home Screen](HomeScreen.jpeg)
 
 ## Cara Menjalankan Project
