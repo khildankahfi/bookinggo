@@ -1,21 +1,31 @@
-<<<<<<< HEAD
-# reservasi_lapangan
+# BookingGo Users App
 
-A new Flutter project.
+## Deskripsi
+BookingGo Users adalah aplikasi mobile berbasis Flutter yang digunakan untuk melakukan reservasi lapangan olahraga secara online. Aplikasi ini terhubung dengan sistem admin (BookingGo Admin) melalui Firebase untuk sinkronisasi data secara real-time.
 
-## Getting Started
+## Fitur
+- Login & Register pengguna
+- Melihat daftar lapangan
+- Pencarian lapangan
+- Booking lapangan
+- Memilih jadwal bermain
+- Pembayaran (simulasi)
+- Riwayat booking
+- Profil pengguna
 
-This project is a starting point for a Flutter application.
+## Teknologi yang Digunakan
+- Flutter (Mobile Framework)
+- Firebase Authentication (Login & Register)
+- Firebase Firestore (Database)
+- Firebase (integrasi dengan admin system)
 
-A few resources to get you started if this is your first Flutter project:
+## Gambaran Sistem
+Aplikasi ini terhubung dengan BookingGo Admin Dashboard, di mana data booking dari pengguna akan langsung masuk ke sistem admin untuk dikelola.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-# bookinggo
->>>>>>> 815df2eb3ad477e7e5dec84614983bcabd913988
+## Cara Menjalankan Project
+1. Clone repository
+2. Jalankan `flutter pub get`
+3. Konfigurasi Firebase (google-services.json)
+4. Jalankan aplikasi:
+   ```bash
+   flutter run
