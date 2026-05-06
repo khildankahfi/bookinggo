@@ -37,14 +37,27 @@ class SlotService {
           .collection('bookings')
           .where('courtId', isEqualTo: courtId)
           .where('date', isEqualTo: date)
-          .where('status', isEqualTo: 'active')
           .get()
           .timeout(const Duration(seconds: 5));
 
-      return snapshot.docs
-          .map((doc) => (doc.data()['hour'] as num?)?.toInt() ?? -1)
-          .where((h) => h >= 0)
-          .toSet();
+      final bookedHours = <int>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final status = data['status'] as String? ?? '';
+        if (status != 'active' && status != 'pending') continue;
+
+        final hour     = (data['hour'] as num?)?.toInt() ?? -1;
+        final duration = (data['duration'] as num?)?.toInt() ?? 1;
+
+        // Tambahkan semua slot yang dipakai booking ini
+        // Misal: jam 08:00 durasi 2 jam → block 8 dan 9
+        if (hour >= 0) {
+          for (int i = 0; i < duration; i++) {
+            bookedHours.add(hour + i);
+          }
+        }
+      }
+      return bookedHours;
     } catch (_) {
       return {};
     }

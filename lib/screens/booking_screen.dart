@@ -25,6 +25,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   // Step 3: Pilih Jam
   int? _selectedHour;
+  int _selectedDuration = 1; // durasi dalam jam (1, 2, 3)
 
   bool _showMessage = false;
   bool _isAvailable = false;
@@ -94,6 +95,7 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       _selectedCourt = court;
       _selectedHour = null;
+      _selectedDuration = 1;
       _showMessage = false;
     });
     // FIX: load slot real-time dari Firestore setelah pilih lapangan
@@ -114,21 +116,36 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       _selectedHour = hour;
       _showMessage = true;
-      // FIX: cek real-time — blok admin PRIORITAS lebih tinggi dari booking
-      if (_isBlockedByAdmin(hour)) {
+
+      // Cek semua slot untuk durasi yang dipilih
+      // Contoh: pilih jam 08:00 durasi 2 jam → cek 08:00 dan 09:00
+      final slotsToCheck = List.generate(
+          _selectedDuration, (i) => hour + i);
+
+      final blockedSlot = slotsToCheck.firstWhere(
+          (h) => _isBlockedByAdmin(h), orElse: () => -1);
+      final bookedSlot = slotsToCheck.firstWhere(
+          (h) => _isBooked(h), orElse: () => -1);
+
+      if (blockedSlot != -1) {
         _isAvailable = false;
         _availabilityMessage =
-            '🚫 Slot jam ${hour.toString().padLeft(2, '0')}:00 ditutup oleh admin.\nSilakan pilih jam lain.';
-      } else if (_isBooked(hour)) {
+            '🚫 Slot jam ${blockedSlot.toString().padLeft(2, '0')}:00 ditutup oleh admin.\nKurangi durasi atau pilih jam lain.';
+      } else if (bookedSlot != -1) {
         _isAvailable = false;
-        final avail = _availableCourtsAt(hour);
-        _availabilityMessage = avail > 0
-            ? '⚠️ ${_selectedCourt!.name} tidak tersedia di jam ini.\n$avail lapangan lain masih tersedia.'
-            : '⚠️ Semua lapangan penuh di jam ${hour.toString().padLeft(2, '0')}:00.\nSilakan pilih jam lain.';
+        _availabilityMessage =
+            '⚠️ Slot jam ${bookedSlot.toString().padLeft(2, '0')}:00 sudah dipesan.\nKurangi durasi atau pilih jam lain.';
+      } else if (hour + _selectedDuration - 1 > _closeHour) {
+        _isAvailable = false;
+        _availabilityMessage =
+            '⚠️ Durasi melebihi jam tutup ($_closeHour:00).\nKurangi durasi atau pilih jam lebih awal.';
       } else {
         _isAvailable = true;
+        final endHour = hour + _selectedDuration;
         _availabilityMessage =
-            '✅ ${_selectedCourt!.name} tersedia!\nJam ${hour.toString().padLeft(2, '0')}:00 bisa dipesan.';
+            '✅ ${_selectedCourt!.name} tersedia!\n'
+            'Jam ${hour.toString().padLeft(2, '0')}:00 – '
+            '${endHour.toString().padLeft(2, '0')}:00 (${ _selectedDuration} jam) bisa dipesan.';
       }
     });
   }
@@ -192,7 +209,7 @@ class _BookingScreenState extends State<BookingScreen> {
       );
       return;
     }
-    // Navigasi ke Payment Screen
+    // Navigasi ke Payment Screen dengan durasi
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -201,6 +218,7 @@ class _BookingScreenState extends State<BookingScreen> {
           court: _selectedCourt!,
           date: _selectedDate,
           hour: _selectedHour!,
+          duration: _selectedDuration,
         ),
       ),
     );
@@ -419,6 +437,9 @@ class _BookingScreenState extends State<BookingScreen> {
             // STEP 2: Pilih Tanggal
             _buildStepTitle('2', 'Pilih Tanggal'),
             const SizedBox(height: 10),
+            // ── Pilihan Durasi ──
+            _buildDurationPicker(),
+            const SizedBox(height: 16),
             _buildDatePicker(),
             const SizedBox(height: 20),
 
@@ -626,6 +647,105 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  // ── Duration Picker ──
+  Widget _buildDurationPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.timelapse, color: _primaryColor, size: 18),
+            const SizedBox(width: 8),
+            const Text(
+              'Durasi',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '$_selectedDuration jam',
+              style: const TextStyle(
+                color: _primaryColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [1, 2, 3].map((d) {
+            final isSelected = _selectedDuration == d;
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedDuration = d;
+                    // Reset jam kalau durasi berubah — perlu cek ulang ketersediaan
+                    if (_selectedHour != null) {
+                      _onSelectHour(_selectedHour!);
+                    }
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? _primaryColor : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? _primaryColor
+                          : Colors.grey.shade200,
+                      width: isSelected ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? _primaryColor.withOpacity(0.25)
+                            : Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '$d Jam',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected
+                              ? Colors.white
+                              : const Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      Text(
+                        _formatHarga(_currentPrice * d),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isSelected
+                              ? Colors.white70
+                              : Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

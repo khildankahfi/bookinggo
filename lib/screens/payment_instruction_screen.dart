@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/venue.dart';
@@ -12,6 +13,7 @@ class PaymentInstructionScreen extends StatefulWidget {
   final Court court;
   final DateTime date;
   final int hour;
+  final int duration;
   final String paymentMethod;
   final int totalPrice;
 
@@ -21,6 +23,7 @@ class PaymentInstructionScreen extends StatefulWidget {
     required this.court,
     required this.date,
     required this.hour,
+    this.duration = 1,
     required this.paymentMethod,
     required this.totalPrice,
   });
@@ -34,6 +37,66 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
 
   bool _isProcessing = false;
+
+  // ── Timer countdown 30 menit ──
+  static const int _totalSeconds = 30 * 60; // 1800 detik
+  int _remainingSeconds = 30 * 60;
+  Timer? _timer;
+  bool _timerExpired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  // ── Mulai countdown timer ──
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) { timer.cancel(); return; }
+
+      setState(() {
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+        } else {
+          _timerExpired = true;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
+  // ── Format detik ke MM:SS ──
+  String get _timerDisplay {
+    final minutes = _remainingSeconds ~/ 60;
+    final seconds = _remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  // ── Warna timer berdasarkan sisa waktu ──
+  Color get _timerColor {
+    if (_remainingSeconds <= 60)  return Colors.red.shade700;   // < 1 menit → merah
+    if (_remainingSeconds <= 300) return Colors.orange.shade700; // < 5 menit → oranye
+    return Colors.green.shade700;  // > 5 menit → hijau
+  }
+
+  Color get _timerBgColor {
+    if (_remainingSeconds <= 60)  return Colors.red.shade50;
+    if (_remainingSeconds <= 300) return Colors.orange.shade50;
+    return Colors.green.shade50;
+  }
+
+  Color get _timerBorderColor {
+    if (_remainingSeconds <= 60)  return Colors.red.shade200;
+    if (_remainingSeconds <= 300) return Colors.orange.shade200;
+    return Colors.green.shade200;
+  }
 
   // ── Generate nomor/kode palsu yang realistis ──
   String get _virtualAccountNumber {
@@ -102,6 +165,7 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
       courtName: widget.court.name,
       date: dateStr,
       hour: widget.hour,
+      duration: widget.duration,
       paymentMethod: _methodName,
       totalPrice: widget.totalPrice,
     );
@@ -271,33 +335,106 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
   }
 
   Widget _buildTimerCard() {
+    if (_timerExpired) {
+      // Timer habis → tampilkan peringatan
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.red.shade300),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timer_off, color: Colors.red.shade700, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Waktu pembayaran habis!',
+                          style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold)),
+                      Text('Silakan kembali dan buat booking baru.',
+                          style: TextStyle(
+                              color: Colors.red.shade600, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () =>
+                    Navigator.popUntil(context, (r) => r.isFirst),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: BorderSide(color: Colors.red.shade300),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Kembali ke Beranda'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
+        color: _timerBgColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: _timerBorderColor),
       ),
       child: Row(
         children: [
-          Icon(Icons.timer_outlined, color: Colors.orange.shade700, size: 22),
+          // Animasi ikon timer
+          Icon(
+            _remainingSeconds <= 60
+                ? Icons.timer_off_outlined
+                : Icons.timer_outlined,
+            color: _timerColor, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Selesaikan pembayaran dalam',
+                  _remainingSeconds <= 60
+                      ? '⚠️ Segera selesaikan pembayaran!'
+                      : 'Selesaikan pembayaran dalam',
                   style: TextStyle(
-                      color: Colors.orange.shade700, fontSize: 12),
+                      color: _timerColor, fontSize: 12),
                 ),
-                Text(
-                  '30:00 menit',
-                  style: TextStyle(
-                    color: Colors.orange.shade800,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      _timerDisplay,
+                      style: TextStyle(
+                        color: _timerColor,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        fontFeatures: const [
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'menit',
+                      style: TextStyle(
+                          color: _timerColor,
+                          fontSize: 13),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -538,11 +675,7 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : _konfirmasiBayar,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
-              ),
+              onPressed: (_isProcessing || _timerExpired) ? null : _konfirmasiBayar,
               child: _isProcessing
                   ? const SizedBox(
                       width: 22, height: 22,

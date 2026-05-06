@@ -47,6 +47,7 @@ class BookingService {
     required String courtName,
     required String date,
     required int hour,
+    int duration = 1, // durasi dalam jam
     required String paymentMethod,
     required int totalPrice,
   }) async {
@@ -68,12 +69,21 @@ class BookingService {
               onTimeout: () => throw Exception('timeout'));
 
       // Cek lokal: ada booking active/pending di jam yang sama?
-      // Tolak jika sudah ada booking active ATAU pending (menunggu konfirmasi)
+      // Untuk durasi > 1 jam, cek semua slot yang dibutuhkan
+      final slotsNeeded = List.generate(duration, (i) => hour + i);
       final isDoubleBooked = snapshot.docs.any((doc) {
         final data = doc.data();
-        final sameHour = data['hour'] == hour;
         final status = data['status'] as String? ?? '';
-        return sameHour && (status == 'active' || status == 'pending');
+        if (status != 'active' && status != 'pending') return false;
+
+        // Cek apakah booking lain overlap dengan slot yang dibutuhkan
+        final existingHour = (data['hour'] as num?)?.toInt() ?? -1;
+        final existingDuration = (data['duration'] as num?)?.toInt() ?? 1;
+        final existingSlots = List.generate(
+            existingDuration, (i) => existingHour + i);
+
+        // Ada overlap kalau ada slot yang sama
+        return slotsNeeded.any((s) => existingSlots.contains(s));
       });
 
       if (isDoubleBooked) {
@@ -115,6 +125,8 @@ class BookingService {
         'courtName': courtName,
         'date': date,
         'hour': hour,
+        'duration': duration,  // simpan durasi
+        'endHour': hour + duration, // jam selesai
         'paymentMethod': paymentMethod,
         'totalPrice': totalPrice,
         'bookingCode': bookingCode,

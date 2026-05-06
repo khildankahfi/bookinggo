@@ -9,6 +9,7 @@ class PaymentScreen extends StatefulWidget {
   final Court court;
   final DateTime date;
   final int hour;
+  final int duration; // durasi dalam jam
 
   const PaymentScreen({
     super.key,
@@ -16,6 +17,7 @@ class PaymentScreen extends StatefulWidget {
     required this.court,
     required this.date,
     required this.hour,
+    this.duration = 1, // default 1 jam
   });
 
   @override
@@ -71,9 +73,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return '${hari[d.weekday - 1]}, ${d.day} ${bulan[d.month]} ${d.year}';
   }
 
-  // FIX: harga dinamis berdasarkan hari (weekday/weekend)
-  int get _totalBayar => widget.venue.getPriceForDate(widget.date);
-  String get _priceLabel => widget.venue.getPriceLabel(widget.date);
+  // FIX: harga dinamis berdasarkan hari × durasi
+  int get _hargaPerJam => widget.venue.getPriceForDate(widget.date);
+  int get _totalBayar  => _hargaPerJam * widget.duration;
+  String get _priceLabel =>
+      'Sewa ${widget.duration} jam × ${widget.venue.getPriceLabel(widget.date)}';
   int get _biayaAdmin => 2000;
   int get _grandTotal => _totalBayar + _biayaAdmin;
 
@@ -101,6 +105,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           court: widget.court,
           date: widget.date,
           hour: widget.hour,
+          duration: widget.duration,
           paymentMethod: _selectedPayment,
           totalPrice: _grandTotal,
         ),
