@@ -29,12 +29,31 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Venue> _venues = [];
   bool _isLoading = true;
 
+  // FIX: simpan nama sebagai state agar bisa diupdate setelah edit profil
+  String _userName  = 'Pengguna'; // nilai default dulu
+  String _userEmail = '';
+
   static const Color _primaryColor = Color(0xFF5E5CE6);
 
   @override
   void initState() {
     super.initState();
+    // Gunakan widget.userName sebagai nilai awal
+    if (widget.userName.isNotEmpty) _userName = widget.userName;
+    _userEmail = '';
     _loadVenues();
+    _loadUserData(); // load data terbaru dari Firebase
+  }
+
+  // Load data user terbaru dari Firebase Auth
+  Future<void> _loadUserData() async {
+    final user = await AuthService.getCurrentUser();
+    if (user != null && mounted) {
+      setState(() {
+        _userName  = user['name'] ?? _userName;
+        _userEmail = user['email'] ?? '';
+      });
+    }
   }
 
   Future<void> _loadVenues() async {
@@ -164,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         children: [
                           Text(
-                            'Halo, ${widget.userName} ',
+                            'Halo, ${_userName} ',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -189,8 +208,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   radius: 24,
                   backgroundColor: Colors.white24,
                   child: Text(
-                    widget.userName.isNotEmpty
-                        ? widget.userName[0].toUpperCase()
+                    _userName.isNotEmpty
+                        ? _userName[0].toUpperCase()
                         : 'P',
                     style: const TextStyle(
                       color: Colors.white,
@@ -456,8 +475,8 @@ class _HomeScreenState extends State<HomeScreen> {
               radius: 48,
               backgroundColor: _primaryColor.withOpacity(0.15),
               child: Text(
-                widget.userName.isNotEmpty
-                    ? widget.userName[0].toUpperCase()
+                _userName.isNotEmpty
+                    ? _userName[0].toUpperCase()
                     : 'P',
                 style: const TextStyle(
                   color: _primaryColor,
@@ -468,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              widget.userName,
+              _userName,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -491,17 +510,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => EditProfilScreen(
-                        userName: widget.userName,
-                        userEmail: 'pengguna@email.com',
+                        userName: _userName,
+                        userEmail: _userEmail,
                       ),
                     ),
                   );
-                  // Nama sudah diupdate dari edit profil (nanti konek ke state management)
+                  // FIX: update nama di state agar langsung berubah di UI
                   if (updatedName != null && mounted) {
+                    setState(() => _userName = updatedName);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Selamat datang, $updatedName!'),
-                        backgroundColor: _primaryColor,
+                        content: Text('Profil berhasil diperbarui!'),
+                        backgroundColor: Colors.green,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );

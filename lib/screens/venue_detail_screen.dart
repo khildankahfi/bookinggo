@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/venue.dart';
+import '../services/favorite_service.dart';
 import 'booking_screen.dart';
 
 class VenueDetailScreen extends StatefulWidget {
@@ -13,6 +14,48 @@ class VenueDetailScreen extends StatefulWidget {
 class _VenueDetailScreenState extends State<VenueDetailScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
   bool _isFavorite = false;
+  bool _isTogglingFavorite = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteStatus();
+  }
+
+  // Load status favorit dari Firestore saat screen dibuka
+  Future<void> _loadFavoriteStatus() async {
+    final isFav = await FavoriteService.isFavorite(widget.venue.id);
+    if (mounted) setState(() => _isFavorite = isFav);
+  }
+
+  // Toggle favorit ke Firestore
+  Future<void> _toggleFavorite() async {
+    if (_isTogglingFavorite) return;
+    setState(() => _isTogglingFavorite = true);
+
+    final result = await FavoriteService.toggleFavorite(widget.venue.id);
+    if (mounted) {
+      setState(() {
+        _isFavorite = result;
+        _isTogglingFavorite = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(children: [
+            Icon(result ? Icons.favorite : Icons.favorite_border,
+                color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(result
+                ? '${widget.venue.name} ditambahkan ke favorit!'
+                : 'Dihapus dari favorit'),
+          ]),
+          backgroundColor: result ? Colors.red.shade400 : Colors.grey,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   final List<Map<String, dynamic>> _reviews = [
     {
@@ -106,7 +149,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
       foregroundColor: Colors.white,
       actions: [
         IconButton(
-          onPressed: () => setState(() => _isFavorite = !_isFavorite),
+          onPressed: _isTogglingFavorite ? null : _toggleFavorite,
           icon: Icon(
             _isFavorite ? Icons.favorite : Icons.favorite_border,
             color: _isFavorite ? Colors.red.shade300 : Colors.white,
