@@ -98,18 +98,29 @@ class AuthService {
     try {
       final user = _auth.currentUser!;
 
-      // Update Firestore dan Firebase Auth secara paralel — lebih cepat
+      // Siapkan data yang akan diupdate
+      final Map<String, dynamic> userData = {
+        'name':  name,
+        'email': email,
+        // FIX: selalu update phone — pakai '' kalau dikosongkan
+        // supaya user bisa hapus nomor HP juga
+        'phone': phone?.trim() ?? '',
+      };
+
+      // FIX: pakai set() dengan merge:true bukan update()
+      // update() akan error kalau dokumen belum ada di Firestore
+      // set() dengan merge akan create kalau belum ada, update kalau sudah ada
       await Future.wait([
-        _db.collection('users').doc(user.uid).update({
-          'name': name,
-          'email': email,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
-        }),
+        _db.collection('users').doc(user.uid).set(
+          userData,
+          SetOptions(merge: true),
+        ),
         user.updateDisplayName(name),
       ]);
 
       // Update password hanya jika diminta
-      if (oldPassword != null && newPassword != null) {
+      if (oldPassword != null && newPassword != null &&
+          oldPassword.isNotEmpty && newPassword.isNotEmpty) {
         final cred = EmailAuthProvider.credential(
           email: user.email!,
           password: oldPassword,
@@ -120,7 +131,7 @@ class AuthService {
 
       return {
         'success': true,
-        'user': {'name': name, 'email': email},
+        'user': {'name': name, 'email': email, 'phone': phone ?? ''},
       };
     } on FirebaseAuthException catch (e) {
       return {'success': false, 'message': _authErrorMessage(e.code)};
@@ -128,6 +139,7 @@ class AuthService {
       return {'success': false, 'message': 'Gagal update profil: $e'};
     }
   }
+
 
   // ── Ambil UID user saat ini (synchronous) ──
   static String? getCurrentUid() => _auth.currentUser?.uid;

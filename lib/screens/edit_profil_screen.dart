@@ -42,6 +42,30 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     _oldPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+    // Load nomor HP dari Firestore
+    _loadPhoneFromFirestore();
+  }
+
+  // Ambil nomor HP dari Firestore
+  Future<void> _loadPhoneFromFirestore() async {
+    try {
+      final uid = AuthService.getCurrentUid();
+      if (uid == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (doc.exists && mounted) {
+        final phone = doc.data()?['phone'] as String? ?? '';
+        if (phone.isNotEmpty) {
+          setState(() => _phoneController.text = phone);
+        }
+      }
+    } catch (e) {
+      // Gagal load - biarkan kosong
+    }
   }
 
   @override
