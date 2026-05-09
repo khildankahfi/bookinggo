@@ -26,6 +26,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
 
   String _selectedPayment = '';
+  bool _isProcessing = false;
 
   final List<Map<String, dynamic>> _paymentMethods = [
     {
@@ -79,21 +80,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
   int get _grandTotal => _totalBayar + _biayaAdmin;
 
   Future<void> _prosesPayment() async {
-    if (_selectedPayment.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pilih metode pembayaran terlebih dahulu'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+  if (_selectedPayment.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pilih metode pembayaran terlebih dahulu'),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 500));
 
     // FIX FLOW: Jangan langsung simpan booking saat user tekan "Bayar Sekarang"
     // Arahkan dulu ke instruksi pembayaran → user konfirmasi → baru booking disimpan
     // Ini mensimulasikan flow nyata payment gateway (Midtrans/Xendit)
     if (!mounted) return;
+
+    setState(() {
+      _isProcessing = false;
+    });
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -184,7 +196,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: categoryColor.withValues(alpha:0.15),
+                  color: categoryColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(categoryIcon, color: categoryColor, size: 28),
@@ -482,10 +494,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _prosesPayment,
-              child: const Text(
-                  'Bayar Sekarang',
-                  style: TextStyle(fontSize: 16),),
+              onPressed: _isProcessing ? null : _prosesPayment,
+              child: _isProcessing
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5),
+                    )
+                  : const Text('Bayar Sekarang',
+                      style: TextStyle(fontSize: 16)),
             ),
           ),
         ],

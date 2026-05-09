@@ -385,31 +385,42 @@ class _RiwayatScreenState extends State<RiwayatScreen>
   }
 
   void _shareBooking(Map<String, dynamic> booking) {
-    final code    = booking['bookingCode'] ?? '-';
-    final venue   = booking['venueName']   ?? '-';
-    final court   = booking['courtName']   ?? '-';
-    final date    = booking['date']        ?? '-';
-    final hour    = (booking['hour'] as num?)?.toInt() ?? 0;
-    final jamStr  = '${hour.toString().padLeft(2, '0')}:00 – ${(hour+1).toString().padLeft(2, '0')}:00';
-    final price   = (booking['totalPrice'] as num?)?.toInt() ?? 0;
+    final code     = booking['bookingCode'] ?? '-';
+    final venue    = booking['venueName']   ?? '-';
+    final court    = booking['courtName']   ?? '-';
+    final date     = booking['date']        ?? '-';
+    final hour     = (booking['hour'] as num?)?.toInt() ?? 0;
+    final duration = (booking['duration'] as num?)?.toInt() ?? 1;
+    final endHour  = hour + duration;
+    final jamStr   = '${hour.toString().padLeft(2, '0')}:00 – ${endHour.toString().padLeft(2, '0')}:00';
+    final price    = (booking['totalPrice'] as num?)?.toInt() ?? 0;
 
-    final text = '''
-🏟️ Booking Reservasi Lapangan
+    // FIX: Format harga tanpa replaceAllMapped 
+    String formatHarga(int val) {
+      final str = val.toString();
+      final buffer = StringBuffer();
+      for (int i = 0; i < str.length; i++) {
+        if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
+        buffer.write(str[i]);
+      }
+      return buffer.toString();
+    }
 
-📋 Kode: $code
-🏟️ Venue: $venue
-🎯 Lapangan: $court
-📅 Tanggal: $date
-⏰ Jam: $jamStr
-💰 Total: Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '\${m[1]}.')}
+    final hargaStr = 'Rp ${formatHarga(price)}';
+    final durasiStr = '$duration Jam';
 
-Tunjukkan kode ini ke petugas saat tiba di lokasi.
-''';
+    // FIX: gunakan string concatenation biasa, bukan interpolasi kompleks
+    final text = '🏟️ Booking Reservasi Lapangan\n\n'
+        '📋 Kode: $code\n'
+        '🏟️ Venue: $venue\n'
+        '🎯 Lapangan: $court\n'
+        '📅 Tanggal: $date\n'
+        '⏰ Jam: $jamStr ($durasiStr)\n'
+        '💰 Total: $hargaStr\n\n'
+        'Tunjukkan kode ini ke petugas saat tiba di lokasi.';
 
-    // Copy ke clipboard
-    Clipboard.setData(ClipboardData(text: text.trim()));
+    Clipboard.setData(ClipboardData(text: text));
 
-    // Tampilkan bottom sheet
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -461,13 +472,14 @@ Tunjukkan kode ini ke petugas saat tiba di lokasi.
                     ),
                   ),
                   const SizedBox(height: 4),
+                  // FIX: gunakan variabel langsung, bukan escape string
                   Text(
-                    '\$venue • \$court',
+                    '$venue • $court',
                     style: TextStyle(
                         color: Colors.grey.shade600, fontSize: 12),
                   ),
                   Text(
-                    '\$date • \$jamStr',
+                    '$date • $jamStr',
                     style: TextStyle(
                         color: Colors.grey.shade600, fontSize: 12),
                   ),
