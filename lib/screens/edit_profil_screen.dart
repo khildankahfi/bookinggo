@@ -202,7 +202,7 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                 icon: Icons.lock_outline,
                 trailing: Switch(
                   value: _changePassword,
-                  activeColor: _primaryColor,
+                  activeThumbColor: _primaryColor,
                   onChanged: (val) {
                     setState(() {
                       _changePassword = val;
@@ -319,7 +319,7 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
             children: [
               CircleAvatar(
                 radius: 52,
-                backgroundColor: _primaryColor.withOpacity(0.15),
+                backgroundColor: _primaryColor.withValues(alpha: 0.15),
                 child: Text(
                   _nameController.text.isNotEmpty
                       ? _nameController.text[0].toUpperCase()
@@ -391,7 +391,7 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

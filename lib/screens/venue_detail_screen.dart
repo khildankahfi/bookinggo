@@ -173,7 +173,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(_categoryIcon, color: Colors.white, size: 48),
@@ -308,7 +308,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F8FF),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _primaryColor.withOpacity(0.15)),
+                border: Border.all(color: _primaryColor.withValues(alpha: 0.15)),
               ),
               child: Row(
                 children: [
@@ -317,7 +317,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: _primaryColor.withOpacity(0.1),
+                      color: _primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
@@ -397,7 +397,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
                     children: [
                       CircleAvatar(
                         radius: 16,
-                        backgroundColor: _primaryColor.withOpacity(0.15),
+                        backgroundColor: _primaryColor.withValues(alpha: 0.15),
                         child: Text(
                           review['name'][0],
                           style: const TextStyle(
@@ -484,7 +484,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, -3),
           ),
@@ -537,7 +537,7 @@ class _VenueDetailScreenState extends State<VenueDetailScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),

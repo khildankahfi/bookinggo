@@ -112,7 +112,7 @@ class _FavoritScreenState extends State<FavoritScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: InkWell(
@@ -124,7 +124,7 @@ class _FavoritScreenState extends State<FavoritScreen> {
           child: Row(children: [
             Container(
               width: 56, height: 56,
-              decoration: BoxDecoration(color: catColor.withOpacity(0.15),
+              decoration: BoxDecoration(color: catColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12)),
               child: Icon(catIcon, color: catColor, size: 30),
             ),

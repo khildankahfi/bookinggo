@@ -39,7 +39,6 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
   bool _isProcessing = false;
 
   // ── Timer countdown 30 menit ──
-  static const int _totalSeconds = 30 * 60; // 1800 detik
   int _remainingSeconds = 30 * 60;
   Timer? _timer;
   bool _timerExpired = false;
@@ -246,7 +245,7 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.08),
+                color: _primaryColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -468,8 +467,8 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.qr_code_2,
-                      size: 100, color: const Color(0xFF1A1A2E)),
+                  const Icon(Icons.qr_code_2,
+                      size: 100, color: Color(0xFF1A1A2E)),
                   Text('Scan QR Code',
                       style: TextStyle(
                           color: Colors.grey.shade500, fontSize: 11)),
@@ -662,7 +661,7 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, -3),
           ),
@@ -682,9 +681,9 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2.5),
                     )
-                  : Row(
+                  : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.check_circle_outline, size: 20),
                         SizedBox(width: 8),
                         Text('Saya Sudah Bayar',
@@ -718,9 +717,9 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _primaryColor.withOpacity(0.06),
+        color: _primaryColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _primaryColor.withOpacity(0.2)),
+        border: Border.all(color: _primaryColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -831,7 +830,7 @@ class _PaymentInstructionScreenState extends State<PaymentInstructionScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

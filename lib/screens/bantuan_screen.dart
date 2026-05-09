@@ -125,7 +125,7 @@ class _BantuanScreenState extends State<BantuanScreen> {
                   Text(
                     'Tim kami siap membantu kamu\n7 hari seminggu',
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.85), fontSize: 13),
+                        color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
                   ),
                 ],
               ),
@@ -148,7 +148,7 @@ class _BantuanScreenState extends State<BantuanScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -247,7 +247,7 @@ class _BantuanScreenState extends State<BantuanScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -271,7 +271,7 @@ class _BantuanScreenState extends State<BantuanScreen> {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: (kontak['color'] as Color)
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(

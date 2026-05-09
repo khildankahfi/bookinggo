@@ -27,7 +27,7 @@ class SlotService {
       );
     } catch (e) {
       // Kalau gagal (offline/timeout), return kosong — tidak blok user
-      return SlotAvailability(bookedHours: {}, blockedHours: {});
+      return const SlotAvailability(bookedHours: {}, blockedHours: {});
     }
   }
 
@@ -62,7 +62,9 @@ class SlotService {
         final hour     = (data['hour'] as num?)?.toInt() ?? -1;
         final duration = (data['duration'] as num?)?.toInt() ?? 1;
         if (hour >= 0) {
-          for (int i = 0; i < duration; i++) bookedHours.add(hour + i);
+          for (int i = 0; i < duration; i++) {
+            bookedHours.add(hour + i);
+          }
         }
       }
 

@@ -95,7 +95,7 @@ class Venue {
 //  SAMPLE DATA
 // ════════════════════════════════════════════
 final List<Venue> sampleVenues = [
-  Venue(
+  const Venue(
     id: '1',
     name: 'Futsal Arena',
     category: 'Futsal',
@@ -109,7 +109,7 @@ final List<Venue> sampleVenues = [
       Court(id: '1-c', name: 'Lapangan 3', isAvailable: true),
     ],
   ),
-  Venue(
+  const Venue(
     id: '2',
     name: 'K14 Arena',
     category: 'Basket',
@@ -123,7 +123,7 @@ final List<Venue> sampleVenues = [
       Court(id: '2-c', name: 'Lapangan 3', isAvailable: true),
     ],
   ),
-  Venue(
+  const Venue(
     id: '3',
     name: 'Pro Master',
     category: 'Badminton',
@@ -138,7 +138,7 @@ final List<Venue> sampleVenues = [
       Court(id: '3-d', name: 'Lapangan 4', isAvailable: true),
     ],
   ),
-  Venue(
+  const Venue(
     id: '4',
     name: 'Voli Center',
     category: 'Voli',

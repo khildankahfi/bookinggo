@@ -53,11 +53,20 @@ class _RiwayatScreenState extends State<RiwayatScreen>
     return 'Rp $buffer';
   }
 
-  // FIX BUG 3: Format jam dari int ke string 'HH:00 – HH+1:00'
-  String _formatJam(dynamic hour) {
+  // FIX: Format jam dengan baca duration dari Firestore
+  // Sebelumnya selalu +1 jam, sekarang pakai field 'duration' yang tersimpan
+  String _formatJam(dynamic hour, {dynamic duration}) {
     if (hour == null) return '-';
     final h = (hour as num).toInt();
-    return '${h.toString().padLeft(2, '0')}:00 – ${(h + 1).toString().padLeft(2, '0')}:00';
+    final dur = duration != null ? (duration as num).toInt() : 1;
+    return '${h.toString().padLeft(2, '0')}:00 – ${(h + dur).toString().padLeft(2, '0')}:00';
+  }
+
+  // Format label durasi
+  String _formatDurasi(dynamic duration) {
+    if (duration == null) return '1 Jam';
+    final dur = (duration as num).toInt();
+    return '$dur Jam';
   }
 
   @override
@@ -189,7 +198,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -205,7 +214,7 @@ class _RiwayatScreenState extends State<RiwayatScreen>
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: categoryColor.withOpacity(0.15),
+                    color: categoryColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(categoryIcon, color: categoryColor, size: 24),
@@ -276,7 +285,10 @@ class _RiwayatScreenState extends State<RiwayatScreen>
                 const SizedBox(height: 6),
                 // FIX BUG 3: Firestore menyimpan 'hour' (int), bukan 'jam' (string)
                 _detailRow(Icons.access_time, 'Jam',
-                    _formatJam(booking['hour'])),
+                    _formatJam(booking['hour'], duration: booking['duration'])),
+                const SizedBox(height: 6),
+                _detailRow(Icons.timelapse, 'Durasi',
+                    _formatDurasi(booking['duration'])),
                 const SizedBox(height: 6),
                 // FIX BUG 3: key 'paymentMethod' bukan 'payment_method'
                 _detailRow(Icons.payment, 'Pembayaran',
@@ -431,10 +443,10 @@ Tunjukkan kode ini ke petugas saat tiba di lokasi.
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF5E5CE6).withOpacity(0.08),
+                color: const Color(0xFF5E5CE6).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF5E5CE6).withOpacity(0.3),
+                  color: const Color(0xFF5E5CE6).withValues(alpha: 0.3),
                 ),
               ),
               child: Column(

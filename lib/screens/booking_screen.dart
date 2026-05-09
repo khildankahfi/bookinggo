@@ -70,7 +70,6 @@ class _BookingScreenState extends State<BookingScreen> {
   // ── Cek slot: gabungan booking user + blok admin ──
   bool _isBooked(int hour) => _slotAvailability.bookedHours.contains(hour);
   bool _isBlockedByAdmin(int hour) => _slotAvailability.blockedHours.contains(hour);
-  bool _isUnavailable(int hour) => _slotAvailability.isUnavailable(hour);
 
   // ── Hitung court tersedia di jam tertentu ──
   int _availableCourtsAt(int hour) {
@@ -146,7 +145,7 @@ class _BookingScreenState extends State<BookingScreen> {
         _availabilityMessage =
             '✅ ${_selectedCourt!.name} tersedia!\n'
             'Jam ${hour.toString().padLeft(2, '0')}:00 – '
-            '${endHour.toString().padLeft(2, '0')}:00 (${ _selectedDuration} jam) bisa dipesan.';
+            '${endHour.toString().padLeft(2, '0')}:00 ($_selectedDuration jam) bisa dipesan.';
       }
     });
   }
@@ -227,7 +226,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
   // ── Harga dinamis berdasarkan hari yang dipilih ──
   int get _currentPrice => widget.venue.getPriceForDate(_selectedDate);
-  String get _priceLabel => widget.venue.getPriceLabel(_selectedDate);
 
   // Format tanggal manual tanpa intl
   String _formatDate(DateTime d) {
@@ -286,7 +284,7 @@ class _BookingScreenState extends State<BookingScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.1),
+                color: _primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle_outline,
@@ -369,7 +367,7 @@ class _BookingScreenState extends State<BookingScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle,
@@ -504,7 +502,7 @@ class _BookingScreenState extends State<BookingScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -515,7 +513,7 @@ class _BookingScreenState extends State<BookingScreen> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 28),
@@ -610,8 +608,8 @@ class _BookingScreenState extends State<BookingScreen> {
               boxShadow: [
                 BoxShadow(
                     color: isSelected
-                        ? _primaryColor.withOpacity(0.25)
-                        : Colors.black.withOpacity(0.05),
+                        ? _primaryColor.withValues(alpha: 0.25)
+                        : Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2))
               ],
@@ -711,8 +709,8 @@ class _BookingScreenState extends State<BookingScreen> {
                     boxShadow: [
                       BoxShadow(
                         color: isSelected
-                            ? _primaryColor.withOpacity(0.25)
-                            : Colors.black.withOpacity(0.05),
+                            ? _primaryColor.withValues(alpha: 0.25)
+                            : Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -761,10 +759,10 @@ class _BookingScreenState extends State<BookingScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: _primaryColor.withOpacity(0.4)),
+              color: _primaryColor.withValues(alpha: 0.4)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2))
           ],
@@ -871,7 +869,7 @@ class _BookingScreenState extends State<BookingScreen> {
               boxShadow: selected
                   ? [
                       BoxShadow(
-                          color: _primaryColor.withOpacity(0.3),
+                          color: _primaryColor.withValues(alpha: 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2))
                     ]

@@ -64,7 +64,11 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
       }
     }
     await batch.commit();
-    setState(() { for (final n in _notifikasi) n['isRead'] = true; });
+    setState(() { 
+      for (final n in _notifikasi) {
+        n['isRead'] = true;
+        }
+      });
   }
 
   int get _jumlahBelumDibaca =>
@@ -179,15 +183,15 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: dibaca ? Colors.white : _primaryColor.withOpacity(0.04),
+          color: dibaca ? Colors.white : _primaryColor.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: dibaca
                   ? Colors.transparent
-                  : _primaryColor.withOpacity(0.15)),
+                  : _primaryColor.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2))
           ],
@@ -196,7 +200,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10)),
             child: Icon(_getIcon(tipe), color: color, size: 22),
           ),

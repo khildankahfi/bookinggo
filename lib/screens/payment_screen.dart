@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/venue.dart';
-import '../services/booking_service.dart';
-import 'riwayat_screen.dart';
 import 'payment_instruction_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -28,7 +26,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   static const Color _primaryColor = Color(0xFF5E5CE6);
 
   String _selectedPayment = '';
-  bool _isProcessing = false;
 
   final List<Map<String, dynamic>> _paymentMethods = [
     {
@@ -113,96 +110,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _showSuccessDialog(String bookingCode) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle, color: Colors.green, size: 52),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Pembayaran Berhasil!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Booking ${widget.court.name} di ${widget.venue.name} telah dikonfirmasi.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.confirmation_number_outlined,
-                      color: _primaryColor, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    bookingCode.isNotEmpty ? bookingCode : '-',
-                    style: const TextStyle(
-                      color: _primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RiwayatScreen()),
-                    (route) => route.isFirst,
-                  );
-                },
-                child: const Text('Lihat Riwayat Booking'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
-              child: const Text('Kembali ke Beranda',
-                  style: TextStyle(color: Colors.grey)),
-            ),
-            const SizedBox(height: 4),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -277,7 +184,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: categoryColor.withOpacity(0.15),
+                  color: categoryColor.withValues(alpha:0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(categoryIcon, color: categoryColor, size: 28),
@@ -317,10 +224,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _summaryRow(
             Icons.access_time,
             'Jam',
-            '${widget.hour.toString().padLeft(2, '0')}:00 – ${(widget.hour + 1).toString().padLeft(2, '0')}:00',
+            '${widget.hour.toString().padLeft(2, '0')}:00 – ${(widget.hour + widget.duration).toString().padLeft(2, '0')}:00',
           ),
           const SizedBox(height: 8),
-          _summaryRow(Icons.timelapse, 'Durasi', '1 Jam'),
+          _summaryRow(Icons.timelapse, 'Durasi', '${widget.duration} Jam'),
         ],
       ),
     );
@@ -475,7 +382,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   height: 38,
                                   decoration: BoxDecoration(
                                     color: (method['color'] as Color)
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
@@ -546,7 +453,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, -3),
           ),
@@ -575,16 +482,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              onPressed: _isProcessing ? null : _prosesPayment,
-              child: _isProcessing
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5),
-                    )
-                  : const Text('Bayar Sekarang',
-                      style: TextStyle(fontSize: 16)),
+              onPressed: _prosesPayment,
+              child: const Text(
+                  'Bayar Sekarang',
+                  style: TextStyle(fontSize: 16),),
             ),
           ),
         ],
@@ -598,7 +499,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.05),
+          color: Colors.black.withValues(alpha: 0.05),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),

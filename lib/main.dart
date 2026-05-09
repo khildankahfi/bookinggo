@@ -95,6 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (isLoggedIn) {
       final user = await AuthService.getCurrentUser();
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

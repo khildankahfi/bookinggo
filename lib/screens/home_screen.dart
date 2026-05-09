@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/venue.dart';
-import '../widgets/category_card.dart';
 import '../widgets/venue_card.dart';
 import '../services/venue_service.dart';
 import '../services/auth_service.dart';
@@ -183,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         children: [
                           Text(
-                            'Halo, ${_userName} ',
+                            'Halo, $_userName ',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
@@ -234,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -303,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -473,7 +472,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             CircleAvatar(
               radius: 48,
-              backgroundColor: _primaryColor.withOpacity(0.15),
+              backgroundColor: _primaryColor.withValues(alpha: 0.15),
               child: Text(
                 _userName.isNotEmpty
                     ? _userName[0].toUpperCase()
@@ -519,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (updatedName != null && mounted) {
                     setState(() => _userName = updatedName);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text('Profil berhasil diperbarui!'),
                         backgroundColor: Colors.green,
                         behavior: SnackBarBehavior.floating,
@@ -579,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onPressed: () async {
                             Navigator.pop(context);
                             await AuthService.logout(); // FIX: logout Firebase dulu
-                            if (!context.mounted) return;
+                            if (!mounted) return;
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
@@ -622,7 +621,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -666,7 +665,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.1),
+                color: _primaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.construction_rounded,
@@ -712,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, -3),
           ),
