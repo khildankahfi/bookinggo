@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class BookingService {
-  static final FirebaseFirestore _db = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseFirestore _db   = FirebaseFirestore.instance;
+  static final FirebaseAuth      _auth = FirebaseAuth.instance;
 
   // ── Ambil riwayat booking user ──
   static Future<List<Map<String, dynamic>>> getBookings() async {
@@ -39,7 +39,8 @@ class BookingService {
     }
   }
 
-  // ── Buat booking baru + cek double booking ──
+  // ── Buat booking baru dengan Firestore Transaction ──
+  // Transaction = atomic: cek + tulis tidak bisa diinterupsi user lain
   static Future<Map<String, dynamic>> createBooking({
     required String venueId,
     required String courtId,
@@ -47,7 +48,7 @@ class BookingService {
     required String courtName,
     required String date,
     required int hour,
-    int duration = 1, // durasi dalam jam
+    int duration = 1,
     required String paymentMethod,
     required int totalPrice,
   }) async {
@@ -57,44 +58,7 @@ class BookingService {
         return {'success': false, 'message': 'User belum login'};
       }
 
-      // ── STEP 1: Cek double booking ──
-      // Query hanya 2 field (courtId + date) → tidak butuh composite index
-      // Filter hour dan status dilakukan lokal di Dart
-      final snapshot = await _db
-          .collection('bookings')
-          .where('courtId', isEqualTo: courtId)
-          .where('date', isEqualTo: date)
-          .get()
-          .timeout(const Duration(seconds: 5),
-              onTimeout: () => throw Exception('timeout'));
-
-      // Cek lokal: ada booking active/pending di jam yang sama?
-      // Untuk durasi > 1 jam, cek semua slot yang dibutuhkan
-      final slotsNeeded = List.generate(duration, (i) => hour + i);
-      final isDoubleBooked = snapshot.docs.any((doc) {
-        final data = doc.data();
-        final status = data['status'] as String? ?? '';
-        if (status != 'active' && status != 'pending') return false;
-
-        // Cek apakah booking lain overlap dengan slot yang dibutuhkan
-        final existingHour = (data['hour'] as num?)?.toInt() ?? -1;
-        final existingDuration = (data['duration'] as num?)?.toInt() ?? 1;
-        final existingSlots = List.generate(
-            existingDuration, (i) => existingHour + i);
-
-        // Ada overlap kalau ada slot yang sama
-        return slotsNeeded.any((s) => existingSlots.contains(s));
-      });
-
-      if (isDoubleBooked) {
-        return {
-          'success': false,
-          'message':
-              'Maaf, slot ${hour.toString().padLeft(2, '0')}:00 baru saja dipesan orang lain. Silakan pilih jam lain.',
-        };
-      }
-
-      // ── STEP 2: Cek slot diblok admin ──
+      // ── Cek slot diblok admin (di luar transaction — read only) ──
       final blockedDoc = await _db
           .collection('blocked_slots')
           .doc('${courtId}_$date')
@@ -102,49 +66,116 @@ class BookingService {
           .timeout(const Duration(seconds: 5));
 
       if (blockedDoc.exists) {
-        final blockedHours =
-            List<int>.from(blockedDoc.data()?['hours'] ?? []);
-        if (blockedHours.contains(hour)) {
+        final blockedHours = List<int>.from(blockedDoc.data()?['hours'] ?? []);
+        final slotsNeeded  = List.generate(duration, (i) => hour + i);
+        final blockedSlot  = slotsNeeded.firstWhere(
+            (h) => blockedHours.contains(h), orElse: () => -1);
+        if (blockedSlot != -1) {
           return {
             'success': false,
-            'message':
-                'Slot ${hour.toString().padLeft(2, '0')}:00 ditutup oleh admin.',
+            'message': 'Slot jam ${blockedSlot.toString().padLeft(2, '0')}:00 ditutup oleh admin.',
           };
         }
       }
 
-      // ── STEP 3: Simpan booking ──
-      final ts = DateTime.now().millisecondsSinceEpoch.toString();
+      // ── Kode booking ──
+      final ts          = DateTime.now().millisecondsSinceEpoch.toString();
       final bookingCode = 'BK-${ts.substring(ts.length - 9)}';
 
-      final docRef = await _db.collection('bookings').add({
-        'userId': uid,
-        'venueId': venueId,
-        'courtId': courtId,
-        'venueName': venueName,
-        'courtName': courtName,
-        'date': date,
-        'hour': hour,
-        'duration': duration,  // simpan durasi
-        'endHour': hour + duration, // jam selesai
-        'paymentMethod': paymentMethod,
-        'totalPrice': totalPrice,
-        'bookingCode': bookingCode,
-        // Status awal 'pending' — menunggu konfirmasi admin
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
+      // ── Firestore Transaction: atomic check + write ──
+      // Semua operasi dalam runTransaction dijamin tidak bisa diinterupsi
+      // Kalau dua user coba bersamaan, Firestore otomatis retry salah satunya
+      String? bookingId;
+      String? errorMessage;
+
+      await _db.runTransaction((transaction) async {
+        final slotsNeeded = List.generate(duration, (i) => hour + i);
+
+        // Baca semua dokumen slot yang dibutuhkan DALAM transaction
+        // Format doc ID: {courtId}_{date}_{hour} — satu dokumen per slot
+        final slotRefs = slotsNeeded.map((h) =>
+            _db.collection('slot_locks').doc('${courtId}_${date}_$h')).toList();
+
+        final slotSnaps = await Future.wait(
+            slotRefs.map((ref) => transaction.get(ref)));
+
+        // Cek apakah ada slot yang sudah terkunci
+        for (int i = 0; i < slotSnaps.length; i++) {
+          final snap   = slotSnaps[i];
+          final slotH  = slotsNeeded[i];
+
+          if (snap.exists) {
+            final status = snap.data()?['status'] as String? ?? '';
+            if (status == 'locked' || status == 'booked') {
+              // STOP transaction — slot sudah diambil
+              errorMessage =
+                  'Maaf, slot jam ${slotH.toString().padLeft(2, '0')}:00 '
+                  'baru saja dipesan orang lain. Silakan pilih jam lain.';
+              return; // keluar dari transaction
+            }
+          }
+        }
+
+        // Kalau semua slot kosong → KUNCI semua slot dalam satu transaction
+        for (int i = 0; i < slotRefs.length; i++) {
+          transaction.set(slotRefs[i], {
+            'venueId':  venueId,  // FIX: simpan venueId untuk filter
+            'courtId':  courtId,
+            'date':     date,
+            'hour':     slotsNeeded[i],
+            'status':   'locked',
+            'userId':   uid,
+            'lockedAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Buat dokumen booking
+        final bookingRef = _db.collection('bookings').doc();
+        bookingId = bookingRef.id;
+
+        transaction.set(bookingRef, {
+          'userId':        uid,
+          'venueId':       venueId,
+          'courtId':       courtId,
+          'venueName':     venueName,
+          'courtName':     courtName,
+          'date':          date,
+          'hour':          hour,
+          'duration':      duration,
+          'endHour':       hour + duration,
+          'paymentMethod': paymentMethod,
+          'totalPrice':    totalPrice,
+          'bookingCode':   bookingCode,
+          'status':        'pending',
+          'createdAt':     FieldValue.serverTimestamp(),
+        });
+
+        // Update status slot dari 'locked' → 'booked'
+        for (final slotRef in slotRefs) {
+          transaction.update(slotRef, {'status': 'booked'});
+        }
       });
 
+      // Cek apakah transaction gagal karena slot sudah terpakai
+      if (errorMessage != null) {
+        return {'success': false, 'message': errorMessage!};
+      }
+
       return {
-        'success': true,
-        'bookingId': docRef.id,
+        'success':     true,
+        'bookingId':   bookingId ?? '',
         'bookingCode': bookingCode,
       };
+
     } on FirebaseException catch (e) {
-      return {
-        'success': false,
-        'message': 'Gagal booking: ${e.message}',
-      };
+      // Transaction conflict → Firestore retry otomatis, kalau tetap gagal
+      if (e.code == 'aborted' || e.code == 'failed-precondition') {
+        return {
+          'success': false,
+          'message': 'Slot sudah dipesan oleh orang lain. Silakan pilih jam lain.',
+        };
+      }
+      return {'success': false, 'message': 'Gagal booking: ${e.message}'};
     } catch (e) {
       return {
         'success': false,
@@ -158,10 +189,34 @@ class BookingService {
   // ── Batalkan booking ──
   static Future<Map<String, dynamic>> cancelBooking(String bookingId) async {
     try {
-      await _db
-          .collection('bookings')
-          .doc(bookingId)
-          .update({'status': 'cancelled'});
+      // Ambil data booking dulu untuk hapus slot_locks-nya
+      final bookingDoc = await _db.collection('bookings').doc(bookingId).get();
+      if (bookingDoc.exists) {
+        final data     = bookingDoc.data()!;
+        final venueId = data['venueId'] as String? ?? '';
+        final courtId  = data['courtId'] as String? ?? '';
+        final date     = data['date']    as String? ?? '';
+        final hour     = (data['hour']   as num?)?.toInt() ?? 0;
+        final duration = (data['duration'] as num?)?.toInt() ?? 1;
+
+        // Hapus slot_locks agar slot bisa dipesan lagi
+        final batch = _db.batch();
+        batch.update(_db.collection('bookings').doc(bookingId),
+            {'status': 'cancelled'});
+
+        for (int i = 0; i < duration; i++) {
+          final slotRef = _db
+              .collection('slot_locks')
+              .doc('${venueId}_${courtId}_${date}_${hour + i}');
+          batch.delete(slotRef);
+        }
+
+        await batch.commit();
+      } else {
+        await _db.collection('bookings').doc(bookingId)
+            .update({'status': 'cancelled'});
+      }
+
       return {'success': true};
     } catch (e) {
       return {

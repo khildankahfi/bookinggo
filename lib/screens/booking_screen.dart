@@ -48,6 +48,7 @@ class _BookingScreenState extends State<BookingScreen> {
         '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
     final availability = await SlotService.getUnavailableSlots(
+      venueId: widget.venue.id, // FIX: tambah venueId agar tidak bentrok antar venue
       courtId: _selectedCourt!.id,
       date: dateStr,
     );
